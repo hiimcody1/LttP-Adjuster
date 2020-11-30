@@ -18,8 +18,8 @@ try{
 	webWorkerApply=new Worker('./js/worker_apply.js');
 	webWorkerApply.onmessage = event => { // listen for events from the worker
 		//retrieve arraybuffers back from webworker		
-		romFile._u8array=event.data.romFileU8Array;
-		romFile._dataView=new DataView(romFile._u8array.buffer);
+		romFile1._u8array=event.data.romFileU8Array;
+		romFile1._dataView=new DataView(romFile._u8array.buffer);
 		
 		patchFile._u8array=event.data.patchFileU8Array;
 		patchFile._dataView=new DataView(patchFile._u8array.buffer);
