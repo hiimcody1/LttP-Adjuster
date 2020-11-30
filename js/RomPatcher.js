@@ -43,8 +43,8 @@ try{
 		//console.log('received_crc');
 		setMessage('create','');
 		jpCrc=padZeroes(event.data.crc32, 4);
-		romFile._u8array=event.data.u8array;
-		romFile._dataView=new DataView(event.data.u8array.buffer);
+		romFile1._u8array=event.data.u8array;
+		romFile1._dataView=new DataView(event.data.u8array.buffer);
 		if (jpCrc!=='3322effc')
 			setMessage('create','Invalid JP v1.0 ROM', 'error');
 		else
