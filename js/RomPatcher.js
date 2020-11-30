@@ -1,15 +1,5 @@
 /* Rom Patcher JS v20201106 - Marc Robledo 2016-2020 - http://www.marcrobledo.com/license */
-
-const TOO_BIG_ROM_SIZE=67108863;
-const HEADERS_INFO=[
-	[/\.nes$/, 16, 1024], //interNES
-	[/\.fds$/, 16, 65500], //fwNES
-	[/\.lnx$/, 64, 1024],
-	//[/\.rom$/, 8192, 1024], //jaguar
-	[/\.(pce|nes|gbc?|smc|sfc|fig|swc)$/, 512, 1024]
-];
-
-
+/* Modified into LttP Adjuster - Fabio Kubagawa */
 
 /* service worker */
 const FORCE_HTTPS=true;
@@ -20,69 +10,45 @@ else if(location.protocol==='https:' && 'serviceWorker' in navigator)
 
 
 
-var romFile, patchFile, patch, romFile1, romFile2, tempFile, headerSize, oldHeader;
+var romFile, patchFile, patch, romFile1, jpCrc, tempFile, indexedDb;
 var fetchedPatches;
-var userLanguage;
-
 var CAN_USE_WEB_WORKERS=true;
-var webWorkerApply,webWorkerCreate,webWorkerCrc;
+var webWorkerApply,webWorkerCrc;
 try{
 	webWorkerApply=new Worker('./js/worker_apply.js');
 	webWorkerApply.onmessage = event => { // listen for events from the worker
-		//retrieve arraybuffers back from webworker
-		if(!el('checkbox-removeheader').checked && !el('checkbox-addheader').checked){ //when adding/removing header we don't need the arraybuffer back since we made a copy previously
-			romFile._u8array=event.data.romFileU8Array;
-			romFile._dataView=new DataView(romFile._u8array.buffer);
-		}
+		//retrieve arraybuffers back from webworker		
+		romFile._u8array=event.data.romFileU8Array;
+		romFile._dataView=new DataView(romFile._u8array.buffer);
+		
 		patchFile._u8array=event.data.patchFileU8Array;
 		patchFile._dataView=new DataView(patchFile._u8array.buffer);
 				
 		if(event.data.patchedRomU8Array)
-			preparePatchedRom(romFile, new MarcFile(event.data.patchedRomU8Array.buffer), headerSize);
+			preparePatchedRom(romFile, new MarcFile(event.data.patchedRomU8Array.buffer));
 
 		setTabApplyEnabled(true);
 		if(event.data.errorMessage)
-			setMessage('apply', _(event.data.errorMessage.replace('Error: ','')), 'error');
+			setMessage('apply', event.data.errorMessage.replace('Error: ',''), 'error');
 		else
 			setMessage('apply');
 	};
 	webWorkerApply.onerror = event => { // listen for events from the worker
 		setTabApplyEnabled(true);
-		setMessage('apply', _(event.message.replace('Error: ','')), 'error');
+		setMessage('apply', event.message.replace('Error: ',''), 'error');
 	};
-
-
-
-	webWorkerCreate=new Worker('./js/worker_create.js');
-	webWorkerCreate.onmessage = event => { // listen for events from the worker
-		var newPatchFile=new MarcFile(event.data.patchFileU8Array);
-		newPatchFile.fileName=romFile2.fileName.replace(/\.[^\.]+$/,'')+'.'+el('select-patch-type').value;
-		newPatchFile.save();
-
-		setMessage('create');
-		setTabCreateEnabled(true);
-	};
-	webWorkerCreate.onerror = event => { // listen for events from the worker
-		setTabCreateEnabled(true);
-		setMessage('create', _(event.message.replace('Error: ','')), 'error');
-	};
-
-
 
 	webWorkerCrc=new Worker('./js/worker_crc.js');
 	webWorkerCrc.onmessage = event => { // listen for events from the worker
 		//console.log('received_crc');
-		el('crc32').innerHTML=padZeroes(event.data.crc32, 4);
-		el('md5').innerHTML=padZeroes(event.data.md5, 16);
+		setMessage('create','');
+		jpCrc=padZeroes(event.data.crc32, 4);
 		romFile._u8array=event.data.u8array;
 		romFile._dataView=new DataView(event.data.u8array.buffer);
-
-		if(window.crypto&&window.crypto.subtle&&window.crypto.subtle.digest){
-			sha1(romFile);
-		}
-
-		validateSource();
-		setTabApplyEnabled(true);
+		if (jpCrc!=='3322effc')
+			setMessage('create','Invalid JP v1.0 ROM', 'error');
+		else
+			setTabCreateEnabled(true);
 	};
 	webWorkerCrc.onerror = event => { // listen for events from the worker
 		setMessage('apply', event.message.replace('Error: ',''), 'error');
@@ -95,13 +61,12 @@ try{
 /* Shortcuts */
 function addEvent(e,ev,f){e.addEventListener(ev,f,false)}
 function el(e){return document.getElementById(e)}
-function _(str){return userLanguage[str] || str}
 
 
 
 function fetchPatch(uri){
-	setTabApplyEnabled(false);
-	setMessage('apply', _('downloading'), 'loading');
+	setTabCreateEnabled(false);
+	setMessage('create', 'Downloading...', 'loading');
 
 
 	var isCompressed=/\#/.test(uri);
@@ -120,8 +85,8 @@ function fetchPatch(uri){
 				_readPatchFile();
 			})
 			.catch(function(evt){
-				setMessage('apply', _('error_downloading'), 'error');
-				//setMessage('apply', evt.message, 'error');
+				setMessage('create', 'Error downloading patch', 'error');
+				//setMessage('create', evt.message, 'error');
 			});
 	}else{
 		var xhr=new XMLHttpRequest();
@@ -134,64 +99,18 @@ function fetchPatch(uri){
 				fetchedPatches[patchURI].fileName=patchURI.replace(/^(.*?\/)+/g, '');
 				_readPatchFile();
 			}else{
-				setMessage('apply', _('error_downloading')+' ('+this.status+')', 'error');
+				setMessage('create', 'Error downloading patch'+' ('+this.status+')', 'error');
 			}
 		};
 
 		xhr.onerror=function(evt){
-			setMessage('apply', _('error_downloading'), 'error');
+			setMessage('create', 'Error downloading patch', 'error');
 		};
 
 		xhr.send(null);
 	}
 }
 
-
-function _parseROM(){
-	el('checkbox-addheader').checked=false;
-	el('checkbox-removeheader').checked=false;
-
-	if(romFile.readString(4).startsWith(ZIP_MAGIC)){
-		parseZIPFile(romFile);
-		setTabApplyEnabled(false);
-	}else{
-		if(headerSize=canHaveFakeHeader(romFile)){
-			el('row-addheader').style.display='flex';
-			if(headerSize<1024){
-				el('headersize').innerHTML=headerSize+'b';
-			}else{
-				el('headersize').innerHTML=parseInt(headerSize/1024)+'kb';
-			}
-			el('row-removeheader').style.display='none';
-		}else if(headerSize=hasHeader(romFile)){
-			el('row-addheader').style.display='none';
-			el('row-removeheader').style.display='flex';
-		}else{
-			el('row-addheader').style.display='none';
-			el('row-removeheader').style.display='none';
-		}
-
-		updateChecksums(romFile, 0);
-	}
-}
-
-
-
-function setLanguage(langCode){
-	if(typeof LOCALIZATION[langCode]==='undefined')
-		langCode='en';
-
-	userLanguage=LOCALIZATION[langCode];
-
-	var translatableElements=document.querySelectorAll('*[data-localize]');
-	for(var i=0; i<translatableElements.length; i++){
-		translatableElements[i].innerHTML=_(translatableElements[i].dataset.localize);
-	}
-	
-	if(typeof localStorage!=='undefined'){
-		localStorage.setItem('rompatcher-js-lang', langCode);
-	}
-}
 
 /* initialize app */
 addEvent(window,'load',function(){
@@ -206,24 +125,15 @@ addEvent(window,'load',function(){
 		script.src='./js/zip.js/inflate.js';
 		document.getElementsByTagName('head')[0].appendChild(script);
 	}
-
-	/* language */
-	var langCode=(navigator.language || navigator.userLanguage).substr(0,2);
-	if(typeof localStorage!=='undefined' && localStorage.getItem('rompatcher-js-lang'))
-		langCode=localStorage.getItem('rompatcher-js-lang');
-	el('select-language').value=langCode;
-	setLanguage(langCode);
-
-	
-	el('row-file-patch').title=_('compatible_formats')+' IPS, UPS, APS, BPS, RUP, PPF, MOD (Paper Mario Star Rod), xdelta';
 	
 	el('input-file-rom').value='';
 	el('input-file-patch').value='';
+	el('input-file-jp').value='';
 	setTabApplyEnabled(true);
 
 	addEvent(el('input-file-rom'), 'change', function(){
-		setTabApplyEnabled(false);
-		romFile=new MarcFile(this, _parseROM);
+		romFile=new MarcFile(this);
+		setTabApplyEnabled(true);		
 	});
 
 
@@ -267,123 +177,54 @@ addEvent(window,'load',function(){
 		fetchPatch(select.value);
 	}else{
 		setTabCreateEnabled(true);
-		el('input-file-rom1').value='';
-		el('input-file-rom2').value='';
+		el('input-file-jp').value='';
+		el('input-file-patch').value='';
 
 		el('switch-container').style.visibility='visible';
 
+		addEvent(el('input-file-jp'), 'change', function(e){
+			if (e.target.value){
+				setTabCreateEnabled(false);
+				romFile1=new MarcFile(this, function(){setTabCreateEnabled(true)});
+				verifyJpRom(romFile1,0);
+			}			
+		});
 		addEvent(el('input-file-patch'), 'change', function(){
-			setTabApplyEnabled(false);
-			patchFile=new MarcFile(this, _readPatchFile)
-		});
-		addEvent(el('input-file-rom1'), 'change', function(){
 			setTabCreateEnabled(false);
-			romFile1=new MarcFile(this, function(){setTabCreateEnabled(true)});
-		});
-		addEvent(el('input-file-rom2'), 'change', function(){
-			setTabCreateEnabled(false);
-			romFile2=new MarcFile(this, function(){setTabCreateEnabled(true)});
+			patchFile=new MarcFile(this, _readPatchFile);
 		});
 	}
 
-
-
-
-
-	addEvent(el('checkbox-removeheader'), 'change', function(){
-		if(this.checked)
-			updateChecksums(romFile, headerSize);
-		else
-			updateChecksums(romFile, 0);
+	var spriteSelect = el('select-sprite');
+	var spriteSelect2 = el('select-sprite2');
+	spriteDatabase.forEach(eachSprite => {
+		spriteSelect.options.add(new Option(eachSprite.name, eachSprite.file));
+		spriteSelect2.options.add(new Option(eachSprite.name, eachSprite.file));
 	});
 
-	//setCreatorMode(true);
+	indexedDb = new IndexedDb();
+	
 });
 
-
-
-function canHaveFakeHeader(romFile){
-	if(romFile.fileSize<=0x600000){
-		for(var i=0; i<HEADERS_INFO.length; i++){
-			if(HEADERS_INFO[i][0].test(romFile.fileName) && (romFile.fileSize%HEADERS_INFO[i][2]===0)){
-				return HEADERS_INFO[i][1];
-			}
-		}
-	}
-	return 0;
-}
-
-function hasHeader(romFile){
-	if(romFile.fileSize<=0x600200){
-		if(romFile.fileSize%1024===0)
-			return 0;
-
-		for(var i=0; i<HEADERS_INFO.length; i++){
-			if(HEADERS_INFO[i][0].test(romFile.fileName) && (romFile.fileSize-HEADERS_INFO[i][1])%HEADERS_INFO[i][1]===0){
-				return HEADERS_INFO[i][1];
-			}
-		}
-	} 
-	return 0;
-}
-
-
-
-
-
-function updateChecksums(file, startOffset, force){
-	if(file===romFile && file.fileSize>33554432 && !force){
-		el('crc32').innerHTML='File is too big. <span onclick=\"updateChecksums(romFile,'+startOffset+',true)\">Force calculate checksum</span>';
-		el('md5').innerHTML='';
-		el('sha1').innerHTML='';
-		setTabApplyEnabled(true);
-		return false;
-	}
-	el('crc32').innerHTML='Calculating...';
-	el('md5').innerHTML='Calculating...';
-
+function verifyJpRom(file, startOffset){
 	if(CAN_USE_WEB_WORKERS){
-		setTabApplyEnabled(false);
+		setTabCreateEnabled(false);
 		webWorkerCrc.postMessage({u8array:file._u8array, startOffset:startOffset}, [file._u8array.buffer]);
-
-		if(window.crypto&&window.crypto.subtle&&window.crypto.subtle.digest){
-			el('sha1').innerHTML='Calculating...';
-		}
 	}else{
-		window.setTimeout(function(){
-			el('crc32').innerHTML=padZeroes(crc32(file, startOffset), 4);
-			el('md5').innerHTML=padZeroes(md5(file, startOffset), 16);
-
-			validateSource();
-			setTabApplyEnabled(true);
+		setMessage('create','');
+		window.setTimeout(()=>{
+			jpCrc=padZeroes(crc32(file, startOffset), 4);
+			if (jpCrc!=='3322effc')
+				setMessage('create','Invalid JP v1.0 ROM', 'error');
+			else
+				setTabCreateEnabled(true);
 		}, 30);
-
-		if(window.crypto&&window.crypto.subtle&&window.crypto.subtle.digest){
-			el('sha1').innerHTML='Calculating...';
-			sha1(file);
-		}
 	}
 }
-
-function validateSource(){
-	if(patch && romFile && typeof patch.validateSource !== 'undefined'){
-		if(patch.validateSource(romFile, el('checkbox-removeheader').checked && hasHeader(romFile))){
-			el('crc32').className='valid';
-			setMessage('apply');
-		}else{
-			el('crc32').className='invalid';
-			setMessage('apply', _('error_crc_input'), 'warning');
-		}
-	}else{
-		el('crc32').className='';
-		setMessage('apply');
-	}
-}
-
 
 
 function _readPatchFile(){
-	setTabApplyEnabled(false);
+	setTabCreateEnabled(false);
 	patchFile.littleEndian=false;
 
 	var header=patchFile.readString(6);
@@ -394,8 +235,7 @@ function _readPatchFile(){
 			parseZIPFile(patchFile);
 		}
 		patch=false;
-		validateSource();
-		setTabApplyEnabled(false);
+		setTabCreateEnabled(false);
 	}else{
 		if(header.startsWith(IPS_MAGIC)){
 			patch=parseIPSFile(patchFile);
@@ -415,17 +255,16 @@ function _readPatchFile(){
 			patch=parseVCDIFF(patchFile);
 		}else{
 			patch=null;
-			setMessage('apply', _('error_invalid_patch'), 'error');
+			setMessage('create', 'Invalid patch file', 'error');
 		}
 
-		if(patch && typeof PREDEFINED_PATCHES!=='undefined' && PREDEFINED_PATCHES[el('input-file-patch').selectedIndex].crc){
+		/*if(patch && typeof PREDEFINED_PATCHES!=='undefined' && PREDEFINED_PATCHES[el('input-file-patch').selectedIndex].crc){
 			patch.validateSource=function(romFile, headerSize){
 				return PREDEFINED_PATCHES[el('input-file-patch').selectedIndex].crc===crc32(romFile, headerSize)
 			}
-		}
+		}*/
 
-		validateSource();
-		setTabApplyEnabled(true);
+		setTabCreateEnabled(true);
 	}
 }
 
@@ -433,83 +272,45 @@ function _readPatchFile(){
 
 
 
-function preparePatchedRom(originalRom, patchedRom, headerSize){
-	patchedRom.fileName=originalRom.fileName.replace(/\.([^\.]*?)$/, ' (patched).$1');
+function preparePatchedRom(originalRom, patchedRom){
+	patchedRom.fileName=patchFile.fileName.replace(/\.([^\.]*?)$/, '.sfc');
 	patchedRom.fileType=originalRom.fileType;
-	if(headerSize){
-		if(el('checkbox-removeheader').checked){
-			var patchedRomWithOldHeader=new MarcFile(headerSize+patchedRom.fileSize);
-			oldHeader.copyToFile(patchedRomWithOldHeader, 0);
-			patchedRom.copyToFile(patchedRomWithOldHeader, 0, patchedRom.fileSize, headerSize);
-			patchedRomWithOldHeader.fileName=patchedRom.fileName;
-			patchedRomWithOldHeader.fileType=patchedRom.fileType;
-			patchedRom=patchedRomWithOldHeader;
-		}else if(el('checkbox-addheader').checked){
-			patchedRom=patchedRom.slice(headerSize);
 
-		}
-	}
-
-
-
-	/* fix checksum if needed */
-	//var fixedChecksum=fixConsoleChecksum(patchedRom);
-
-
-
-
-	setMessage('apply');
-	patchedRom.save();
-
-
-	/*if(fixedChecksum){
-		setMessage('apply','Checksum was fixed','warning');
-	}*/
-	
-	//debug: create unheadered patch
-	/*if(headerSize && el('checkbox-addheader').checked){
-		createPatch(romFile, patchedRom);
-	}*/
+	// Adjust the ROM
+	fetchSpriteData(patchedRom,indexedDb.obj.sprite,
+		(rom,sprite) => {
+				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
+					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,sprite,
+					indexedDb.obj.owp,indexedDb.obj.uwp);
+				setMessage('create');
+				rom.save();
+	});
 }
 
+function adjustPatch(romToAdjust){
+	indexedDb.save();
+	romToAdjust.fileName=romToAdjust.fileName.replace(/\.([^\.]*?)$/, ' (adjusted).$1');	
+	fetchSpriteData(romToAdjust,indexedDb.obj.sprite,
+		(rom,sprite) => {
+				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
+					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,sprite,
+					indexedDb.obj.owp,indexedDb.obj.uwp);
+				setMessage('apply');
+				rom.save();
+		});
+}
 
-/*function removeHeader(romFile){
-	//r._dataView=new DataView(r._dataView.buffer, headerSize);
-	oldHeader=romFile.slice(0,headerSize);
-	r=r.slice(headerSize);
-}*/
-function applyPatch(p,r,validateChecksums){
+function applyPatch(p,r){
+	indexedDb.save();
 	if(p && r){
-		if(headerSize){
-			if(el('checkbox-removeheader').checked){
-				//r._dataView=new DataView(r._dataView.buffer, headerSize);
-				oldHeader=r.slice(0,headerSize);
-				r=r.slice(headerSize);
-			}else if(el('checkbox-addheader').checked){
-				var romWithFakeHeader=new MarcFile(headerSize+r.fileSize);
-				romWithFakeHeader.fileName=r.fileName;
-				romWithFakeHeader.fileType=r.fileType;
-				r.copyToFile(romWithFakeHeader, 0, r.fileSize, headerSize);
-
-				//add FDS header
-				if(/\.fds$/.test(r.FileName) && r.fileSize%65500===0){
-					//romWithFakeHeader.seek(0);
-					romWithFakeHeader.writeBytes([0x46, 0x44, 0x53, 0x1a, r.fileSize/65500]);
-				}
-
-				r=romWithFakeHeader;
-			}
-		}
-
 		if(CAN_USE_WEB_WORKERS){
-			setMessage('apply', _('applying_patch'), 'loading');
+			setMessage('create', 'Applying patch...', 'loading');
 			setTabApplyEnabled(false);
 
 			webWorkerApply.postMessage(
 				{
 					romFileU8Array:r._u8array,
-					patchFileU8Array:patchFile._u8array,
-					validateChecksums:validateChecksums
+					patchFileU8Array:patchFile._u8array
 				},[
 					r._u8array.buffer,
 					patchFile._u8array.buffer
@@ -517,87 +318,19 @@ function applyPatch(p,r,validateChecksums){
 			);
 
 		}else{
-			setMessage('apply', _('applying_patch'), 'loading');
+			setMessage('create', 'Applying patch...', 'loading');
 
 			try{
-				p.apply(r, validateChecksums);
-				preparePatchedRom(r, p.apply(r, validateChecksums), headerSize);
+				p.apply(r);
+				preparePatchedRom(r, p.apply(r));
 
 			}catch(e){
-				setMessage('apply', 'Error: '+_(e.message), 'error');
+				setMessage('create', 'Error: '+e.message, 'error');
 			}
 		}
 
 	}else{
-		setMessage('apply', 'No ROM/patch selected', 'error');
-	}
-}
-
-
-
-
-
-
-
-function createPatch(sourceFile, modifiedFile, mode){
-	if(!sourceFile){
-		setMessage('create', 'No source ROM file specified.', 'error');
-		return false;
-	}else if(!modifiedFile){
-		setMessage('create', 'No modified ROM file specified.', 'error');
-		return false;
-	}
-
-
-	if(CAN_USE_WEB_WORKERS){
-		setTabCreateEnabled(false);
-
-		setMessage('create', _('creating_patch'), 'loading');
-
-		webWorkerCreate.postMessage(
-			{
-				sourceFileU8Array:sourceFile._u8array,
-				modifiedFileU8Array:modifiedFile._u8array,
-				modifiedFileName:modifiedFile.fileName,
-				patchMode:mode
-			},[
-				sourceFile._u8array.buffer,
-				modifiedFile._u8array.buffer
-			]
-		);
-		
-		romFile1=new MarcFile(el('input-file-rom1'));
-		romFile2=new MarcFile(el('input-file-rom2'));
-	}else{
-		try{
-			sourceFile.seek(0);
-			modifiedFile.seek(0);
-
-			var newPatch;
-			if(mode==='ips'){
-				newPatch=createIPSFromFiles(sourceFile, modifiedFile);
-			}else if(mode==='bps'){
-				newPatch=createBPSFromFiles(sourceFile, modifiedFile, (sourceFile.fileSize<=4194304));
-			}else if(mode==='ups'){
-				newPatch=createUPSFromFiles(sourceFile, modifiedFile);
-			}else if(mode==='aps'){
-				newPatch=createAPSFromFiles(sourceFile, modifiedFile);
-			}else if(mode==='rup'){
-				newPatch=createRUPFromFiles(sourceFile, modifiedFile);
-			}else{
-				setMessage('create', _('error_invalid_patch'), 'error');
-			}
-
-
-			if(crc32(modifiedFile)===crc32(newPatch.apply(sourceFile))){
-				newPatch.export(modifiedFile.fileName.replace(/\.[^\.]+$/,'')).save();
-			}else{
-				setMessage('create', 'Unexpected error: verification failed. Patched file and modified file mismatch. Please report this bug.', 'error');
-			}
-
-		}catch(e){
-			setMessage('create', 'Error: '+_(e.message), 'error');
-		}
+		setMessage('create', 'No ROM/patch selected', 'error');
 	}
 }
 
@@ -635,25 +368,14 @@ function setElementEnabled(element,status){
 	el(element).disabled=!status;
 }
 function setTabCreateEnabled(status){
-	if(
-		(romFile1 && romFile1.fileSize>TOO_BIG_ROM_SIZE) ||
-		(romFile2 && romFile2.fileSize>TOO_BIG_ROM_SIZE)
-	){
-		setMessage('create',_('warning_too_big'),'warning');
-	}
-	setElementEnabled('input-file-rom1', status);
-	setElementEnabled('input-file-rom2', status);
-	setElementEnabled('select-patch-type', status);
-	if(romFile1 && romFile2 && status){
+	if(patchFile && romFile1 && status && jpCrc==='3322effc'){
 		setElementEnabled('button-create', status);
 	}else{
 		setElementEnabled('button-create', false);
 	}
 }
 function setTabApplyEnabled(status){
-	setElementEnabled('input-file-rom', status);
-	setElementEnabled('input-file-patch', status);
-	if(romFile && status && (patch || typeof PREDEFINED_PATCHES!=='undefined')){
+	if(romFile && status){
 		setElementEnabled('button-apply', status);
 	}else{
 		setElementEnabled('button-apply', false);

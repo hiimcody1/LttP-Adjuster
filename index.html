@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Rom Patcher JS</title>
+	<title>LttP Adjuster and Patcher</title>
 	<meta http-equiv="content-Type" content="text/html; charset=UTF-8"/>
-	<meta name="description" content="An online web-based ROM patcher. Supported formats: IPS, BPS, UPS, APS, RUP, PPF and xdelta."/>
-	<meta name="keywords" content="ips,ups,aps,bps,rup,ninja,ppf,xdelta,patcher,online,html5,web,rom,patch,hack,translation"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
 	<link rel="manifest" href="./manifest.json"/>
 	<link rel="shortcut icon" href="./style/favicon.png" type="image/png" sizes="16x16"/>
@@ -16,22 +14,16 @@
 	<link rel="apple-touch-icon" sizes="144x144" href="./style/logo144.png" />
 	<link rel="apple-touch-icon" href="./style/logo192.png" />
 
-	<!-- social network metatags -->	
-	<meta name="twitter:site" content="@marc_robledo">
-	<meta name="twitter:creator" content="@marc_robledo">
-	<meta name="twitter:domain" content="marcrobledo.com">
-	<meta property="og:title" content="Rom Patcher JS">
-	<meta name="twitter:title" content="Rom Patcher JS">
-	<meta name="twitter:description" content="An online web-based ROM patcher. Supported formats: IPS, BPS, UPS, APS, RUP, PPF and xdelta.">
-	<meta property="og:image" content="https://www.marcrobledo.com/RomPatcher.js/style/thumbnail.jpg">
-	<meta name="twitter:image" content="https://www.marcrobledo.com/RomPatcher.js/style/thumbnail.jpg">
-	<meta name="twitter:card" content="photo">
-
 	<link type="text/css" rel="stylesheet" href="./style/RomPatcher.css" media="all"/>
-	<script type="text/javascript" src="./js/locale.js"></script>
 	<script type="text/javascript" src="./js/RomPatcher.js"></script>
 	<script type="text/javascript" src="./js/MarcFile.js"></script>
 	<script type="text/javascript" src="./js/crc.js"></script>
+	<script type="text/javascript" src="./js/indexedDb.js"></script>
+	<!-- Babel Dependency for Z3PR -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-polyfill/7.12.1/polyfill.min.js" integrity="sha512-uzOpZ74myvXTYZ+mXUsPhDF+/iL/n32GDxdryI2SJronkEyKC8FBFRLiBQ7l7U/PTYebDbgTtbqTa6/vGtU23A==" crossorigin="anonymous"></script>
+	<script type="text/javascript" src="./js/z3r/z3pr-umd.js"></script>
+	<script type="text/javascript" src="./js/z3r/ZeldaSprite.js"></script>
+	<script type="text/javascript" src="./js/z3r/ZeldaPatcher.js"></script>
 	<script type="text/javascript" src="./js/formats/zip.js"></script>
 	<script type="text/javascript" src="./js/formats/ips.js"></script>
 	<script type="text/javascript" src="./js/formats/ups.js"></script>
@@ -43,7 +35,7 @@
 	<script type="text/javascript" src="./js/formats/vcdiff.js"></script>
 	<script type="text/javascript" src="./js/zip.js/zip.js"></script>
 
-	<script type="text/javascript"><!--
+	<script type="text/javascript">
 		/*
 		// PREDEFINED PATCHES EXAMPLE
 		// uncomment this to enable predefined patches, Rom Patcher JS will fetch patches hosted in your server
@@ -65,7 +57,7 @@
 			{patch:'./_example/MarvelousATI_EN_v1.07.xdelta',name:'Marvelous (SFC) ENG Translation v1.07',crc:0xcedf3ba7}
 		];
 		*/
-	--></script>
+	</script>
 	
 	
 	<!-- custom code for RHDN -->
@@ -93,86 +85,169 @@
 </head>
 <body><div id="column">
 
-
-<!-- HEADER -->
-<header><img src="./style/logo192.png" /><h1>Rom Patcher JS</h1></header>
-
 <!-- APP -->
 <div id="wrapper">
-	<div id="switch-container"><span id="switch-create-button" onclick="setCreatorMode(!/enabled/.test(el('switch-create').className));"><span data-localize="creator_mode">Creator mode</span> <span id="switch-create" class="switch disabled"></span></span></div>
+	<div id="switch-container"><span id="switch-create-button" onclick="setCreatorMode(!/enabled/.test(el('switch-create').className));"><span>Patch mode</span> <span id="switch-create" class="switch disabled"></span></span></div>
 
 	<div id="tab0" class="tab">
+		<h1>Adjuster</h1>
 		<div class="row">
-			<div class="leftcol"><label for="input-file-rom" data-localize="rom_file">ROM file:</label></div>
+			<div class="leftcol"><label for="input-file-rom">Randomizer ROM file:</label></div>
 			<div class="rightcol">
-				<input type="file" id="input-file-rom" class="enabled" />
+				<input type="file" id="input-file-rom" class="enabled" accept=".sfc" />
 			</div>
 		</div>
-		<div class="row" id="rom-info">
-			<div class="leftcol">CRC32:</div><div class="rightcol"><span id="crc32"></span></div>
-			<div class="leftcol">MD5:</div><div class="rightcol"><span id="md5"></span></div>
-			<div class="leftcol">SHA-1:</div><div class="rightcol"><span id="sha1"></span></div>
-		</div>
-		<div class="row" id="row-removeheader" style="display:none">
-			<div class="leftcol"></div>
+		<div class="row" id="row-options">
+			<div class="leftcol">Item Quickswap:</div>
 			<div class="rightcol">
-				<input type="checkbox" id="checkbox-removeheader" /> <label for="checkbox-removeheader" data-localize="remove_header">Remove header before patching</label>
+				<input type="checkbox" id="checkbox-quickswap" />
 			</div>
-		</div>
-		<div class="row" id="row-addheader" style="display:none">
-			<div class="leftcol"></div>
+			<div class="leftcol">Background Music:</div>
 			<div class="rightcol">
-				<input type="checkbox" id="checkbox-addheader" /> <label for="checkbox-addheader" data-localize="add_header">Add temporary header</label> <small>(<label id="headersize" for="checkbox-addheader"></label>)</small>
+				<input type="checkbox" id="checkbox-music" />
 			</div>
-		</div>
-
-		<div class="row" id="row-file-patch">
-			<div class="leftcol"><label for="input-file-patch" data-localize="patch_file">Patch file:</label></div>
+			<div class="leftcol">Sprite:</div>
 			<div class="rightcol">
-				<input type="file" id="input-file-patch" accept=".ips,.ups,.bps,.aps,.rup,.ppf,.mod,.xdelta,.zip"/>
+				<select id="select-sprite">
+				</select>
+			</div>
+			<div class="leftcol">Heart Color:</div>
+			<div class="rightcol">
+				<select id="select-heartcolor">
+					<option value="red">Red</option>
+					<option value="blue">Blue</option>
+					<option value="green">Green</option>
+					<option value="yellow">Yellow</option>
+					<option value="random">Random</option>
+				</select>
+			</div>
+			<div class="leftcol">Heart Beep Rate:</div>
+			<div class="rightcol">
+				<select id="select-beep">
+					<option value="off">Off</option>
+					<option value="double">Double Speed</option>
+					<option value="normal">Normal Speed</option>
+					<option value="half">Half Speed</option>
+					<option value="quarter">Quarter Speed</option>
+				</select>
+			</div>
+			<div class="leftcol">Menu Speed:</div>
+			<div class="rightcol">
+				<select id="select-menuspeed">
+					<option value="instant">Instant</option>
+					<option value="quadruple">Quadruple Speed</option>
+					<option value="triple">Triple Speed</option>
+					<option value="double">Double Speed</option>
+					<option value="normal">Normal Speed</option>
+					<option value="half">Half Speed</option>
+				</select>
+			</div>
+			<div class="leftcol">Overworld Palettes:</div>
+			<div class="rightcol">
+				<select id="select-owpalettes">
+					<option value="none">Unchanged</option>
+					<option value="shuffled">Random</option>
+					<option value="blackout">Blackout</option>
+				</select>
+			</div>
+			<div class="leftcol">Underworld Palettes:</div>
+			<div class="rightcol">
+				<select id="select-uwpalettes">
+					<option value="none">Unchanged</option>
+					<option value="shuffled">Random</option>
+					<option value="blackout">Blackout</option>
+				</select>
 			</div>
 		</div>
 
 		<div class="buttons">
 			<span id="message-apply" class="message"></span>
-			<button id="button-apply" data-localize="apply_patch" class="disabled" disabled onclick="applyPatch(patch, romFile, false)">Apply patch</button>
+			<button id="button-apply" class="disabled" disabled onclick="adjustPatch(romFile)">Adjust ROM</button>
 		</div>
 	</div>
 
 
 
 	<div id="tab1" class="tab">
+		<h1>Patcher + Adjuster</h1>
 		<div class="row">
-			<div class="leftcol"><label for="input-file-rom1" data-localize="original_rom" >Original ROM:</label></div>
+			<div class="leftcol"><label for="input-file-jp" >JP 1.0 ROM file:</label></div>
 			<div class="rightcol">
-				<input type="file" id="input-file-rom1" />
+				<input type="file" id="input-file-jp" accept=".sfc" />
 			</div>
 		</div>
-
 		<div class="row">
-			<div class="leftcol"><label for="input-file-rom2" data-localize="modified_rom">Modified ROM:</label></div>
-			<div class="rightcol">
-				<input type="file" id="input-file-rom2" />
+				<div class="leftcol"><label for="input-file-patch">Patch file:</label></div>
+				<div class="rightcol">
+					<input type="file" id="input-file-patch" accept=".ips,.ups,.bps,.aps,.rup,.ppf,.mod,.xdelta,.zip" />
+				</div>
 			</div>
-		</div>
-
-		<div class="row">
-			<div class="leftcol" data-localize="patch_type">Patch type:</div>
-			<div class="rightcol">
-				<select id="select-patch-type">
-					<option value="ips">IPS</option>
-					<option value="bps">BPS</option>
-					<option value="ppf">PPF</option>
-					<option value="ups">UPS</option>
-					<option value="aps">APS</option>
-					<option value="rup">RUP</option>
-				</select>
+			<div class="row" id="row-options2">
+				<div class="leftcol">Item Quickswap:</div>
+				<div class="rightcol">
+					<input type="checkbox" id="checkbox-quickswap2" />
+				</div>
+				<div class="leftcol">Background Music:</div>
+				<div class="rightcol">
+					<input type="checkbox" id="checkbox-music2" />
+				</div>
+				<div class="leftcol">Sprite:</div>
+				<div class="rightcol">
+					<select id="select-sprite2">
+					</select>
+				</div>
+				<div class="leftcol">Heart Color:</div>
+				<div class="rightcol">
+					<select id="select-heartcolor2">
+						<option value="red">Red</option>
+						<option value="blue">Blue</option>
+						<option value="green">Green</option>
+						<option value="yellow">Yellow</option>
+						<option value="random">Random</option>
+					</select>
+				</div>
+				<div class="leftcol">Heart Beep Rate:</div>
+				<div class="rightcol">
+					<select id="select-beep2">
+						<option value="off">Off</option>
+						<option value="double">Double Speed</option>
+						<option value="normal">Normal Speed</option>
+						<option value="half">Half Speed</option>
+						<option value="quarter">Quarter Speed</option>
+					</select>
+				</div>
+				<div class="leftcol">Menu Speed:</div>
+				<div class="rightcol">
+					<select id="select-menuspeed2">
+						<option value="instant">Instant</option>
+						<option value="quadruple">Quadruple Speed</option>
+						<option value="triple">Triple Speed</option>
+						<option value="double">Double Speed</option>
+						<option value="normal">Normal Speed</option>
+						<option value="half">Half Speed</option>
+					</select>
+				</div>
+				<div class="leftcol">Overworld Palettes:</div>
+				<div class="rightcol">
+					<select id="select-owpalettes2">
+						<option value="none">Default</option>
+						<option value="shuffled">Random</option>
+						<option value="blackout">Blackout</option>
+					</select>
+				</div>
+				<div class="leftcol">Underworld Palettes:</div>
+				<div class="rightcol">
+					<select id="select-uwpalettes2">
+						<option value="none">Default</option>
+						<option value="shuffled">Random</option>
+						<option value="blackout">Blackout</option>
+					</select>
+				</div>
 			</div>
-		</div>
 
 		<div class="buttons">
 			<span id="message-create" class="message"></span>
-			<button id="button-create" class="disabled" disabled onclick="createPatch(romFile1, romFile2, el('select-patch-type').value)" data-localize="create_patch">Create patch</button>
+			<button id="button-create" class="disabled" disabled onclick="applyPatch(patch, romFile1, false)" data-localize="create_patch">Apply patch</button>
 		</div>
 	</div>
 </div>
@@ -183,20 +258,9 @@
 
 <!-- FOOTER -->
 <footer>
-	<div>
-		<select id="select-language" onchange="setLanguage(this.value)">
-			<option value="en">English</option>
-			<option value="de">Deutsch</option>
-			<option value="es">Español</option>
-			<option value="ca">Català</option>
-			<option value="ru">Russian</option>
-		</select>
-	</div>
-
-	Rom Patcher JS <small>v2.4</small> by <a href="/">Marc Robledo</a>
-	<br />
-	<i class="icon github"></i> <a href="https://github.com/marcrobledo/RomPatcher.js/" target="_blank">See on GitHub</a>
-	<i class="icon heart"></i> <a href="https://www.paypal.me/marcrobledo/5" target="_blank" rel="nofollow">Donate</a>
+	LttP Adjuster and Patcher by <a href="https://www.twitch.tv/kyong92">Kyong</a><br />
+	Based on Rom Patcher JS <small>v2.4</small> by <a href="https://www.marcrobledo.com/">Marc Robledo</a>
+	<br />	
 </footer>
 
 </div></body></html>

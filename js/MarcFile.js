@@ -191,6 +191,10 @@ MarcFile.prototype.readBytes=function(len){
 	this.offset+=len;
 	return this._lastRead
 }
+MarcFile.prototype.seekReadBytes=function(offset,len){
+	this.offset = offset;
+	return this.readBytes(len);
+}
 
 MarcFile.prototype.readString=function(len){
 	this._lastRead='';
@@ -205,6 +209,10 @@ MarcFile.prototype.writeU8=function(u8){
 	this._u8array[this.offset]=u8;
 
 	this.offset++;
+}
+MarcFile.prototype.seekWriteU8=function(offset,u8){
+	this.offset=offset;
+	this.writeU8(u8);
 }
 MarcFile.prototype.writeU16=function(u16){
 	if(this.littleEndian){
@@ -252,6 +260,10 @@ MarcFile.prototype.writeBytes=function(a){
 		this._u8array[this.offset+i]=a[i]
 
 	this.offset+=a.length;
+}
+MarcFile.prototype.seekWriteBytes=function(offset,a){
+	this.offset=offset;
+	this.writeBytes(a);
 }
 
 MarcFile.prototype.writeString=function(str,len){

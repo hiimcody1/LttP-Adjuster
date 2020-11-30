@@ -28,35 +28,36 @@ caches.keys().then(function(cacheNames){
 	}
 });
 
-var PRECACHE_ID='rom-patcher-js';
-var PRECACHE_VERSION='v12';
+var PRECACHE_ID='lttp-adjuster';
+var PRECACHE_VERSION='v1';
 var PRECACHE_URLS=[
-	'/RomPatcher.js/','/RomPatcher.js/index.html',
-	'/RomPatcher.js/manifest.json',
-	'/RomPatcher.js/style/favicon.png',
-	'/RomPatcher.js/style/logo114.png',
-	'/RomPatcher.js/style/logo144.png',
-	'/RomPatcher.js/style/logo192.png',
-	'/RomPatcher.js/style/RomPatcher.css',
-	'/RomPatcher.js/js/RomPatcher.js',
-	'/RomPatcher.js/js/locale.js',
-	'/RomPatcher.js/js/worker_apply.js',
-	'/RomPatcher.js/js/worker_create.js',
-	'/RomPatcher.js/js/worker_crc.js',
-	'/RomPatcher.js/js/MarcFile.js',
-	'/RomPatcher.js/js/crc.js',
-	'/RomPatcher.js/js/zip.js/zip.js',
-	'/RomPatcher.js/js/zip.js/z-worker.js',
-	'/RomPatcher.js/js/zip.js/inflate.js',
-	'/RomPatcher.js/js/formats/zip.js',
-	'/RomPatcher.js/js/formats/ips.js',
-	'/RomPatcher.js/js/formats/ups.js',
-	'/RomPatcher.js/js/formats/aps.js',
-	'/RomPatcher.js/js/formats/bps.js',
-	'/RomPatcher.js/js/formats/rup.js',
-	'/RomPatcher.js/js/formats/ppf.js',
-	'/RomPatcher.js/js/formats/pmsr.js',
-	'/RomPatcher.js/js/formats/vcdiff.js'
+	'/LttP-Adjuster/','/LttP-Adjuster/index.html',
+	'/LttP-Adjuster/manifest.json',
+	'/LttP-Adjuster/style/favicon.png',
+	'/LttP-Adjuster/style/logo114.png',
+	'/LttP-Adjuster/style/logo144.png',
+	'/LttP-Adjuster/style/logo192.png',
+	'/LttP-Adjuster/style/RomPatcher.css',
+	'/LttP-Adjuster/js/LttP-Adjuster',
+	'/LttP-Adjuster/js/worker_apply.js',
+	'/LttP-Adjuster/js/worker_crc.js',
+	'/LttP-Adjuster/js/MarcFile.js',
+	'/LttP-Adjuster/js/crc.js',
+	'/LttP-Adjuster/js/zip.js/zip.js',
+	'/LttP-Adjuster/js/zip.js/z-worker.js',
+	'/LttP-Adjuster/js/zip.js/inflate.js',
+	'/LttP-Adjuster/js/formats/zip.js',
+	'/LttP-Adjuster/js/formats/ips.js',
+	'/LttP-Adjuster/js/formats/ups.js',
+	'/LttP-Adjuster/js/formats/aps.js',
+	'/LttP-Adjuster/js/formats/bps.js',
+	'/LttP-Adjuster/js/formats/rup.js',
+	'/LttP-Adjuster/js/formats/ppf.js',
+	'/LttP-Adjuster/js/formats/pmsr.js',
+	'/LttP-Adjuster/js/formats/vcdiff.js',
+	'/LttP-Adjuster/js/z3r/z3pr-umd.js',
+	'/LttP-Adjuster/js/z3r/ZeldaSprite.js',
+	'/LttP-Adjuster/js/z3r/ZeldaPatcher.js'
 ];
 
 
