@@ -83,7 +83,6 @@ function musicPatch(rom, isMusicDisabled){
 }
 
 function spritePatch(rom, sprite){
-  console.log(sprite);
   rom.seekWriteBytes(0x80000, sprite.sprite);
   rom.seekWriteBytes(0xDD308, sprite.palette);
   rom.seekWriteBytes(0xDEDF5, sprite.glovePalette);
