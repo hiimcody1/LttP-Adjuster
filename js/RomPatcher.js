@@ -6,7 +6,7 @@ const FORCE_HTTPS=true;
 if(FORCE_HTTPS && location.protocol==='http:')
 	location.href=window.location.href.replace('http:','https:');
 else if(location.protocol==='https:' && 'serviceWorker' in navigator)
-	navigator.serviceWorker.register('/RomPatcher.js/_cache_service_worker.js', {scope: '/RomPatcher.js/'});
+	navigator.serviceWorker.register('/LttP-Adjuster/_cache_service_worker.js', {scope: '/RomPatcher.js/'});
 
 
 
