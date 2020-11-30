@@ -12,7 +12,7 @@ else if(location.protocol==='https:' && 'serviceWorker' in navigator)
 
 var romFile, patchFile, patch, romFile1, jpCrc, tempFile, indexedDb;
 var fetchedPatches;
-var CAN_USE_WEB_WORKERS=true;
+var CAN_USE_WEB_WORKERS=false;
 var webWorkerApply,webWorkerCrc;
 try{
 	webWorkerApply=new Worker('./js/worker_apply.js');
