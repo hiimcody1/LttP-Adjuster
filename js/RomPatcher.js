@@ -185,8 +185,10 @@ addEvent(window,'load',function(){
 		addEvent(el('input-file-jp'), 'change', function(e){
 			if (e.target.value){
 				setTabCreateEnabled(false);
-				romFile1=new MarcFile(this, function(){setTabCreateEnabled(true)});
-				verifyJpRom(romFile1,0);
+				romFile1=new MarcFile(this, function(){
+					verifyJpRom(romFile1,0);
+				});
+				
 			}			
 		});
 		addEvent(el('input-file-patch'), 'change', function(){
@@ -207,8 +209,8 @@ addEvent(window,'load',function(){
 });
 
 function verifyJpRom(file, startOffset){
-	if(CAN_USE_WEB_WORKERS){
-		setTabCreateEnabled(false);
+	setTabCreateEnabled(false);
+	if(CAN_USE_WEB_WORKERS){		
 		webWorkerCrc.postMessage({u8array:file._u8array, startOffset:startOffset}, [file._u8array.buffer]);
 	}else{
 		setMessage('create','');
