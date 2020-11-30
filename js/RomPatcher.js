@@ -288,7 +288,7 @@ function preparePatchedRom(originalRom, patchedRom){
 }
 
 function adjustPatch(romToAdjust){
-	indexedDb.save();
+	indexedDb.save('apply');
 	romToAdjust.fileName=romToAdjust.fileName.replace(/\.([^\.]*?)$/, ' (adjusted).$1');	
 	fetchSpriteData(romToAdjust,indexedDb.obj.sprite,
 		(rom,sprite) => {
@@ -301,7 +301,7 @@ function adjustPatch(romToAdjust){
 }
 
 function applyPatch(p,r){
-	indexedDb.save();
+	indexedDb.save('create');
 	if(p && r){
 		if(CAN_USE_WEB_WORKERS){
 			setMessage('create', 'Applying patch...', 'loading');
