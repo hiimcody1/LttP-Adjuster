@@ -46,7 +46,7 @@ self.onmessage = event => { // listen for messages from the main thread
 	var patchedRom;
 	if(patch){
 		try{
-			patchedRom=patch.apply(romFile, event.data.validateChecksums);
+			patchedRom=patch.apply(romFile);
 		}catch(evt){
 			errorMessage=evt.message;
 		}
