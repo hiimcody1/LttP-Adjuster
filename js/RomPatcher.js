@@ -369,7 +369,7 @@ function setElementEnabled(element,status){
 	el(element).disabled=!status;
 }
 function setTabCreateEnabled(status){
-	if(patchFile && romFile1 && status && jpCrc==='3322effc'){
+	if((patchFile || patch) && romFile1 && status && jpCrc==='3322effc'){
 		setElementEnabled('button-create', status);
 	}else{
 		setElementEnabled('button-create', false);
