@@ -160,7 +160,6 @@ addEvent(window,'load',function(){
 		container.appendChild(select)
 		container.parentElement.title='';
 
-
 		addEvent(select,'change',function(){
 			if(fetchedPatches[this.value.replace(/\#.*?$/, '')]){
 				patchFile=fetchedPatches[this.value.replace(/\#.*?$/, '')];
@@ -174,26 +173,26 @@ addEvent(window,'load',function(){
 		});
 		fetchPatch(select.value);
 	}else{
-		setTabCreateEnabled(true);
-		el('input-file-jp').value='';
 		el('input-file-patch').value='';
 
 		el('switch-container').style.visibility='visible';
-
-		addEvent(el('input-file-jp'), 'change', function(e){
-			if (e.target.value){
-				setTabCreateEnabled(false);
-				romFile1=new MarcFile(this, function(){
-					verifyJpRom(romFile1,0);
-				});
-				
-			}			
-		});
+		
 		addEvent(el('input-file-patch'), 'change', function(){
 			setTabCreateEnabled(false);
 			patchFile=new MarcFile(this, _readPatchFile);
 		});
 	}
+
+	el('input-file-jp').value='';
+	addEvent(el('input-file-jp'), 'change', function(e){
+		if (e.target.value){
+			setTabCreateEnabled(false);
+			romFile1=new MarcFile(this, function(){
+				verifyJpRom(romFile1,0);
+			});
+			
+		}			
+	});
 
 	var spriteSelect = el('select-sprite');
 	var spriteSelect2 = el('select-sprite2');
