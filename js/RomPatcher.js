@@ -224,6 +224,7 @@ function verifyJpRom(file, startOffset){
 
 
 function _readPatchFile(){
+	setMessage('create','');
 	setTabCreateEnabled(false);
 	patchFile.littleEndian=false;
 
