@@ -103,7 +103,7 @@ function writeCrc(rom){
 }
 
 const z3pr = window.z3pr;
-const randomize = z3pr.randomize;
+const randomizePalette = z3pr.randomize;
 function paletteShufflePatch(rom, uwPalettes, owPalettes) {
   // TODO: revert any changes when choosing none
   var options = {randomize_dungeon: true};
@@ -114,10 +114,15 @@ function paletteShufflePatch(rom, uwPalettes, owPalettes) {
       options.mode = 'maseya'; break;
     case 'blackout':
       options.mode = 'blackout'; break;
-
+    case 'grayscale':
+      options.mode = 'grayscale'; break;
+    case 'legacy':
+      options.mode = 'classic'; break;
+    case 'puke':
+      options.mode = 'puke'; break;
   }
   var romData = rom.seekReadBytes(0, rom.fileSize);
-  romData = randomize(romData, options);
+  romData = randomizePalette(romData, options);
 
   options = {randomize_overworld: true};
   switch(owPalettes){
@@ -127,9 +132,14 @@ function paletteShufflePatch(rom, uwPalettes, owPalettes) {
       options.mode = 'maseya'; break;
     case 'blackout':
       options.mode = 'blackout'; break;
-
+    case 'grayscale':
+      options.mode = 'grayscale'; break;
+    case 'legacy':
+      options.mode = 'classic'; break;
+    case 'puke':
+      options.mode = 'puke'; break;
   }  
-  romData = randomize(romData, options);
+  romData = randomizePalette(romData, options);
 
   rom.seekWriteBytes(0,romData);
 }
