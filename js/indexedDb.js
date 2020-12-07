@@ -58,7 +58,7 @@ IndexedDb.prototype.setFormValues = function(){
   el('select-beep').value = this.obj.beep;
   el('select-menuspeed').value = this.obj.speed;
   el('select-owpalettes').value = this.obj.owp;
-  el('select-uwpalettes').value = this.obj.owp;
+  el('select-uwpalettes').value = this.obj.uwp;
   el('checkbox-quickswap2').checked = this.obj.quickswap;
   el('checkbox-music2').checked = this.obj.music;
   el('select-sprite2').value = this.obj.sprite;
@@ -66,7 +66,7 @@ IndexedDb.prototype.setFormValues = function(){
   el('select-beep2').value = this.obj.beep;
   el('select-menuspeed2').value = this.obj.speed;
   el('select-owpalettes2').value = this.obj.owp;
-  el('select-uwpalettes2').value = this.obj.owp;
+  el('select-uwpalettes2').value = this.obj.uwp;
 }
 
 IndexedDb.prototype.save = function(tab){
