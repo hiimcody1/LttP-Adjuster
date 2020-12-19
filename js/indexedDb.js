@@ -16,38 +16,41 @@ function IndexedDb(){
   if (!('indexedDB' in window)){
     console.log('This browser doesn\'t support IndexedDB');
     return;
-  }
+  } else {
+    var dbPromise = window.indexedDB.open('adjuster-db', 2);
 
-  var dbPromise = window.indexedDB.open('adjuster-db', 2);
-
-  dbPromise.onupgradeneeded = function(e) {
-    var thisDB = e.target.result;
-    if (!thisDB.objectStoreNames.contains('configs')){
-      thisDB.createObjectStore('configs', {keyPath: 'field'});
+    dbPromise.onupgradeneeded = function(e) {
+      var thisDB = e.target.result;
+      if (!thisDB.objectStoreNames.contains('configs')){
+        thisDB.createObjectStore('configs', {keyPath: 'field'});
+      }
     }
-  }
-
-  dbPromise.onsuccess = (e) => {
-    db = e.target.result;
-    this.load();
-  }
+  
+    dbPromise.onsuccess = (e) => {
+      db = e.target.result;
+      this.load();
+    }
+  }  
 }
 
 IndexedDb.prototype.load = function(){  
-  var tx = db.transaction('configs', 'readonly');
-  var store = tx.objectStore('configs');
-  var req = store.getAll();
-
-  req.onsuccess = (e) => {
-    var req = e.target.result;
-    if (req.length > 0){
-      req.forEach(eachConfig => {
-        this.obj[eachConfig.field] = eachConfig.value;
-      });      
+  if (db) {
+    var tx = db.transaction('configs', 'readonly');
+    var store = tx.objectStore('configs');
+    var req = store.getAll();
+  
+    req.onsuccess = (e) => {
+      var req = e.target.result;
+      if (req.length > 0){
+        req.forEach(eachConfig => {
+          this.obj[eachConfig.field] = eachConfig.value;
+        });      
+      }
+  
+      this.setFormValues();
     }
-
-    this.setFormValues();
   }
+  
 }
 
 IndexedDb.prototype.setFormValues = function(){
@@ -83,16 +86,18 @@ IndexedDb.prototype.save = function(tab){
   this.obj.owp = el('select-owpalettes'+id).value;
   this.obj.uwp = el('select-uwpalettes'+id).value;
 
-  var tx = db.transaction('configs', 'readwrite');
-  var store = tx.objectStore('configs');
-  Object.keys(this.obj).forEach(eachKey => {
-    var item = {
-      field: eachKey,
-      value: this.obj[eachKey]
-    };
-    store.put(item);
-  });
-  tx.oncomplete = () => {
-    this.setFormValues();
-  }
+  if (db) {
+    var tx = db.transaction('configs', 'readwrite');
+    var store = tx.objectStore('configs');
+    Object.keys(this.obj).forEach(eachKey => {
+      var item = {
+        field: eachKey,
+        value: this.obj[eachKey]
+      };
+      store.put(item);
+    });
+    tx.oncomplete = () => {
+      this.setFormValues();
+    }
+  } 
 }
