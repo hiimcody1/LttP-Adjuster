@@ -49,6 +49,8 @@ IndexedDb.prototype.load = function(){
   
       this.setFormValues();
     }
+  } else {
+    this.setFormValues();
   }
   
 }
