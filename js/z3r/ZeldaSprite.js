@@ -5,6 +5,13 @@ function Sprite(){
 };
 
 function fetchSpriteData(rom, spriteUrl, onLoad){
+  if (spriteUrl === 'random') {
+    let rnd = Math.floor(Math.random() * (spriteDatabase.length - 1));
+    if (rnd > 0)
+      rnd++;
+    spriteUrl = spriteDatabase[rnd].file;
+  }
+
   fetch(spriteUrl)
     .then(response => checkStatus(response) && response.arrayBuffer())
     .then(buffer => {    
@@ -95,6 +102,7 @@ const defaultSpritePalette = [255, 127, 126, 35, 183, 17, 158, 54, 165, 20, 255,
 const defaultGlovePalette = [246, 82, 118, 3];
 
 const spriteDatabase = [{"name":"Link","author":"Nintendo","version":1,"file":"https:\/\/alttpr.s3.us-east-2.amazonaws.com\/001.link.1.zspr","tags":["Link","Male","Legend of Zelda"]},
+{"name":"Random","author":"","version":1,"file":"random","tags":[]},
 {"name":"Four Swords Link","author":"Mike Trethewey","version":1,"file":"https:\/\/alttpr.s3.us-east-2.amazonaws.com\/4slink-armors.1.zspr","tags":["Link","Male","Legend of Zelda"]},
 {"name":"Abigail","author":"Fish_waffle64","version":1,"file":"https:\/\/alttpr.s3.us-east-2.amazonaws.com\/abigail.1.zspr","tags":["Female"]},
 {"name":"Adol","author":"Yuushia","version":1,"file":"https:\/\/alttpr.s3.us-east-2.amazonaws.com\/adol.1.zspr","tags":["Ys","Male"]},
