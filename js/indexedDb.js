@@ -5,7 +5,7 @@ function IndexedDb(){
     jp_file: null,
     quickswap: true,
     music: true,
-    sprite: 'https://alttpr.s3.us-east-2.amazonaws.com/001.link.1.zspr',
+    sprite: 'https://alttpr-assets.s3.us-east-2.amazonaws.com/001.link.1.zspr',
     color: 'red',
     beep: 'half',
     speed: 'normal',
