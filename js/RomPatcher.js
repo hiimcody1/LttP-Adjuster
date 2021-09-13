@@ -188,10 +188,13 @@ addEvent(window,'load',function(){
 		if (e.target.value){
 			setTabCreateEnabled(false);
 			romFile1=new MarcFile(this, function(){
+				if(romFile1.fileSize%1024===512){
+					romFile1=romFile1.slice(512);
+				}
 				verifyJpRom(romFile1,0);
 			});
 			
-		}			
+		}
 	});
 
 	var spriteSelect = el('select-sprite');
