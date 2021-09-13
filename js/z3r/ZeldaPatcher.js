@@ -1,6 +1,8 @@
-function zeldaPatcher(rom, beepRate, heartColor, isQuickswap, menuSpeed, isMusicDisabled, sprite, owPalettes, uwPalettes){
+function zeldaPatcher(rom, beepRate, heartColor, isQuickswap, menuSpeed, isMusicDisabled, isMSUResume, isFlashingReduced, sprite, owPalettes, uwPalettes){
   quickswapPatch(rom,isQuickswap);
   musicPatch(rom, isMusicDisabled);
+  resumePatch(rom,isMSUResume);
+  flashingPatch(rom,isFlashingReduced);
   menuSpeedPatch(rom,menuSpeed);
   heartBeepPatch(rom,beepRate);
   heartColorPatch(rom,heartColor);
@@ -81,6 +83,15 @@ function musicPatch(rom, isMusicDisabled){
   addresses.list.forEach((address, i) => {
     rom.seekWriteBytes(address, addresses[which][i]);
   });
+}
+
+function resumePatch(rom, isMSUResume){
+  rom.seekWriteU8(0x18021D,isMSUResume ? 0x08 : 0x00);
+  rom.seekWriteU8(0x18021E,isMSUResume ? 0x07 : 0x00);
+}
+
+function flashingPatch(rom, isFlashingReduced){
+  rom.seekWriteU8(0x18017F,isFlashingReduced ? 0x01 : 0x00);
 }
 
 function spritePatch(rom, sprite){

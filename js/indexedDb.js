@@ -5,6 +5,8 @@ function IndexedDb(){
     jp_file: null,
     quickswap: true,
     music: true,
+    resume: true,
+    flashing: false,
     sprite: 'https://alttpr-assets.s3.us-east-2.amazonaws.com/001.link.1.zspr',
     color: 'red',
     beep: 'half',
@@ -58,6 +60,8 @@ IndexedDb.prototype.load = function(){
 IndexedDb.prototype.setFormValues = function(){
   el('checkbox-quickswap').checked = this.obj.quickswap;
   el('checkbox-music').checked = this.obj.music;
+  el('checkbox-resume').checked = this.obj.resume;
+  el('checkbox-flashing').checked = this.obj.flashing;
   el('select-sprite').value = this.obj.sprite;
   el('select-heartcolor').value = this.obj.color;
   el('select-beep').value = this.obj.beep;
@@ -66,6 +70,8 @@ IndexedDb.prototype.setFormValues = function(){
   el('select-uwpalettes').value = this.obj.uwp;
   el('checkbox-quickswap2').checked = this.obj.quickswap;
   el('checkbox-music2').checked = this.obj.music;
+  el('checkbox-resume2').checked = this.obj.resume;
+  el('checkbox-flashing2').checked = this.obj.flashing;
   el('select-sprite2').value = this.obj.sprite;
   el('select-heartcolor2').value = this.obj.color;
   el('select-beep2').value = this.obj.beep;
@@ -81,6 +87,8 @@ IndexedDb.prototype.save = function(tab){
   // TODO: add jp rom
   this.obj.quickswap = el('checkbox-quickswap'+id).checked;
   this.obj.music = el('checkbox-music'+id).checked;
+  this.obj.resume = el('checkbox-resume'+id).checked;
+  this.obj.flashing = el('checkbox-flashing'+id).checked;
   this.obj.sprite = el('select-sprite'+id).value;
   this.obj.color = el('select-heartcolor'+id).value;
   this.obj.beep = el('select-beep'+id).value;

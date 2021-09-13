@@ -280,7 +280,8 @@ function preparePatchedRom(originalRom, patchedRom){
 	fetchSpriteData(patchedRom,indexedDb.obj.sprite,
 		(rom,sprite) => {
 				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
-					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,sprite,
+					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
+					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
 					indexedDb.obj.owp,indexedDb.obj.uwp);
 				setMessage('create');
 				rom.save();
@@ -293,7 +294,8 @@ function adjustPatch(romToAdjust){
 	fetchSpriteData(romToAdjust,indexedDb.obj.sprite,
 		(rom,sprite) => {
 				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
-					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,sprite,
+					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
+					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
 					indexedDb.obj.owp,indexedDb.obj.uwp);
 				setMessage('apply');
 				rom.save();
