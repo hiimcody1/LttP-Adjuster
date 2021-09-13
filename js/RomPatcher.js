@@ -2,7 +2,7 @@
 /* Modified into LttP Adjuster - Fabio Kubagawa */
 
 /* service worker */
-const FORCE_HTTPS=true;
+const FORCE_HTTPS=!location.href.startsWith('http://localhost:');
 if(FORCE_HTTPS && location.protocol==='http:')
 	location.href=window.location.href.replace('http:','https:');
 else if(location.protocol==='https:' && 'serviceWorker' in navigator)
