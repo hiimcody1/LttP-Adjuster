@@ -267,7 +267,7 @@ function _readPatchFile(){
 			}
 		}*/
 
-		setTabCreateEnabled(true);
+		window.setTimeout(()=>{setTabCreateEnabled(true);}, 30);
 	}
 }
 
