@@ -98,6 +98,24 @@ function spritePatch(rom, sprite){
   rom.seekWriteBytes(0x80000, sprite.sprite);
   rom.seekWriteBytes(0xDD308, sprite.palette);
   rom.seekWriteBytes(0xDEDF5, sprite.glovePalette);
+  if(sprite.author && rom.fileSize>=0x200000){
+    rom.seek(0x118000);
+    if(rom.readU8()!==0x02 || rom.readU8()!==0x37){
+      return;
+    }
+    rom.seek(0x11801E);
+    if(rom.readU8()!==0x02 || rom.readU8()!==0x37){
+      return;
+    }
+    rom.seek(0x118002);
+    for(var i=0; i<28; i++){
+      rom.writeU8(sprite.author[i][0]);
+    }
+    rom.seek(0x118020);
+    for(var i=0; i<28; i++){
+      rom.writeU8(sprite.author[i][1]);
+    }
+  }
 }
 
 function writeCrc(rom){

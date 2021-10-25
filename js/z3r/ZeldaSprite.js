@@ -86,6 +86,78 @@ function parseZspr(sprite, fileData){
       sprite.glovePalette = fileData.readBytes(0x4);
     }
   }
+
+  try{
+    fileData.seek(0x1D);
+    var skip = 2;
+    while(skip && !fileData.isEOF()){
+      if(fileData.readU16()===0){
+        skip--;
+      }
+    }
+    var author = '';
+    while(author.length<28){
+      var c = fileData.readU8();
+      if(c===0){
+        break;
+      }
+      author += String.fromCharCode(c);
+    }
+    if(author.length%2===1){
+      author += ' ';
+    }
+    while(author.length<28){
+      author = ' '+author+' ';
+    }
+    // conversion based on https://github.com/sporchia/alttp_vt_randomizer/blob/master/resources/js/rom.js
+    sprite.author = author.toUpperCase().split("").map(item => {
+      switch(item){
+        case " ": return [0x9F, 0x9F];
+        case "0": return [0x53, 0x79];
+        case "1": return [0x54, 0x7A];
+        case "2": return [0x55, 0x7B];
+        case "3": return [0x56, 0x7C];
+        case "4": return [0x57, 0x7D];
+        case "5": return [0x58, 0x7E];
+        case "6": return [0x59, 0x7F];
+        case "7": return [0x5A, 0x80];
+        case "8": return [0x5B, 0x81];
+        case "9": return [0x5C, 0x82];
+        case "A": return [0x5D, 0x83];
+        case "B": return [0x5E, 0x84];
+        case "C": return [0x5F, 0x85];
+        case "D": return [0x60, 0x86];
+        case "E": return [0x61, 0x87];
+        case "F": return [0x62, 0x88];
+        case "G": return [0x63, 0x89];
+        case "H": return [0x64, 0x8A];
+        case "I": return [0x65, 0x8B];
+        case "J": return [0x66, 0x8C];
+        case "K": return [0x67, 0x8D];
+        case "L": return [0x68, 0x8E];
+        case "M": return [0x69, 0x8F];
+        case "N": return [0x6A, 0x90];
+        case "O": return [0x6B, 0x91];
+        case "P": return [0x6C, 0x92];
+        case "Q": return [0x6D, 0x93];
+        case "R": return [0x6E, 0x94];
+        case "S": return [0x6F, 0x95];
+        case "T": return [0x70, 0x96];
+        case "U": return [0x71, 0x97];
+        case "V": return [0x72, 0x98];
+        case "W": return [0x73, 0x99];
+        case "X": return [0x74, 0x9A];
+        case "Y": return [0x75, 0x9B];
+        case "Z": return [0x76, 0x9C];
+        case "'": return [0x77, 0x9d];
+        case ".": return [0xA0, 0xC0];
+        case "/": return [0xA2, 0xC2];
+        case ":": return [0xA3, 0xC3];
+        case "_": return [0xA6, 0xC6];
+        default: return [0x9F, 0x9F];
+      }
+    });
+  }catch(e){}
   return sprite;
 }
 
