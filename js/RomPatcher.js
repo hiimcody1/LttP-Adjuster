@@ -2,7 +2,7 @@
 /* Modified into LttP Adjuster - Fabio Kubagawa */
 
 /* service worker */
-const FORCE_HTTPS=true;
+const FORCE_HTTPS=!location.href.startsWith('http://localhost:');
 if(FORCE_HTTPS && location.protocol==='http:')
 	location.href=window.location.href.replace('http:','https:');
 else if(location.protocol==='https:' && 'serviceWorker' in navigator)
@@ -188,10 +188,13 @@ addEvent(window,'load',function(){
 		if (e.target.value){
 			setTabCreateEnabled(false);
 			romFile1=new MarcFile(this, function(){
+				if(romFile1.fileSize%1024===512){
+					romFile1=romFile1.slice(512);
+				}
 				verifyJpRom(romFile1,0);
 			});
 			
-		}			
+		}
 	});
 
 	var spriteSelect = el('select-sprite');
@@ -264,7 +267,7 @@ function _readPatchFile(){
 			}
 		}*/
 
-		setTabCreateEnabled(true);
+		window.setTimeout(()=>{setTabCreateEnabled(true);}, 30);
 	}
 }
 
@@ -280,7 +283,8 @@ function preparePatchedRom(originalRom, patchedRom){
 	fetchSpriteData(patchedRom,indexedDb.obj.sprite,
 		(rom,sprite) => {
 				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
-					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,sprite,
+					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
+					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
 					indexedDb.obj.owp,indexedDb.obj.uwp);
 				setMessage('create');
 				rom.save();
@@ -293,7 +297,8 @@ function adjustPatch(romToAdjust){
 	fetchSpriteData(romToAdjust,indexedDb.obj.sprite,
 		(rom,sprite) => {
 				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
-					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,sprite,
+					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
+					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
 					indexedDb.obj.owp,indexedDb.obj.uwp);
 				setMessage('apply');
 				rom.save();
