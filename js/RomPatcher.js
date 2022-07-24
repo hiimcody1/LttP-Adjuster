@@ -2,15 +2,16 @@
 /* Modified into LttP Adjuster - Fabio Kubagawa */
 
 /* service worker */
-const FORCE_HTTPS=true;
+const FORCE_HTTPS=!location.href.startsWith('http://localhost:');
 if(FORCE_HTTPS && location.protocol==='http:')
 	location.href=window.location.href.replace('http:','https:');
 else if(location.protocol==='https:' && 'serviceWorker' in navigator)
-	navigator.serviceWorker.register('/LttP-Adjuster/_cache_service_worker.js', {scope: '/LttP-Adjuster/'});
+	//Doesn't seem to work right, let's just not even try...
+	//navigator.serviceWorker.register('/LttP-Adjuster/_cache_service_worker.js', {scope: '/LttP-Adjuster/'});
 
 
 
-var romFile, patchFile, patch, romFile1, jpCrc, tempFile, indexedDb;
+var romFile, patchFile, patch, romFile1, jpCrc, tempFile, indexedDb, spriteFile;
 var fetchedPatches;
 var CAN_USE_WEB_WORKERS=false;
 var webWorkerApply,webWorkerCrc;
@@ -81,6 +82,7 @@ function fetchPatch(uri){
 				fetchedPatches[patchURI]=patchFile=new MarcFile(arrayBuffer);
 				fetchedPatches[patchURI].fileName=patchURI.replace(/^(.*?\/)+/g, '');
 				_readPatchFile();
+				el('row-input-file-patch').style.display = 'none';
 			})
 			.catch(function(evt){
 				setMessage('create', 'Error downloading patch', 'error');
@@ -109,6 +111,48 @@ function fetchPatch(uri){
 	}
 }
 
+function fetchJsonPatch(uri){
+	var patchURI=decodeURI(uri.replace(/\#.*?$/, ''));
+
+	if(typeof window.fetch==='function' || 9 == 8){
+		fetch(patchURI)
+			.then(result => result.json()) // Gets the response and returns it as a blob
+			.then(json => {
+				if(json.spoiler != null) {
+					SeedMode = json.spoiler.meta.name;
+				}
+				jsonPatch = json.patch;
+			})
+			.catch(function(evt){
+				setMessage('create', 'Error downloading JSON', 'error');
+				setTabCreateEnabled(false);
+			});
+	}else{
+		var xhr=new XMLHttpRequest();
+		xhr.open('GET', patchURI, true);
+		xhr.responseType='json';
+
+		xhr.onload=function(evt){
+			if(this.status===200){
+				if(xhr.response.spoiler != null) {
+					SeedMode = xhr.response.spoiler.meta.name;
+				}
+				jsonPatch = xhr.response.patch;
+			}else{
+				setMessage('create', 'Error downloading JSON', 'error');
+				setTabCreateEnabled(false);
+			}
+		};
+
+		xhr.onerror=function(evt){
+			setMessage('create', 'Error downloading JSON', 'error');
+			setTabCreateEnabled(false);
+		};
+
+		xhr.send(null);
+	}
+}
+
 
 /* initialize app */
 addEvent(window,'load',function(){
@@ -124,15 +168,17 @@ addEvent(window,'load',function(){
 		document.getElementsByTagName('head')[0].appendChild(script);
 	}
 	
-	el('input-file-rom').value='';
+	//el('input-file-rom').value='';
 	el('input-file-patch').value='';
 	el('input-file-jp').value='';
 	setTabApplyEnabled(true);
 
+	/*
 	addEvent(el('input-file-rom'), 'change', function(){
 		romFile=new MarcFile(this);
 		setTabApplyEnabled(true);		
 	});
+	*/
 
 
 	/* dirty fix for mobile Safari https://stackoverflow.com/a/19323498 */
@@ -188,18 +234,41 @@ addEvent(window,'load',function(){
 		if (e.target.value){
 			setTabCreateEnabled(false);
 			romFile1=new MarcFile(this, function(){
+				if(romFile1.fileSize%1024===512){
+					romFile1=romFile1.slice(512);
+				}
 				verifyJpRom(romFile1,0);
 			});
 			
-		}			
+		}
 	});
 
-	var spriteSelect = el('select-sprite');
+	el('input-file-sprite').value='';
+	addEvent(el('input-file-sprite'), 'change', function(e){
+		if (e.target.value){
+			spriteFile =new MarcFile(this);
+		}
+	});
+
+	//var spriteSelect = el('select-sprite');
 	var spriteSelect2 = el('select-sprite2');
 	spriteDatabase.forEach(eachSprite => {
-		spriteSelect.options.add(new Option(eachSprite.name, eachSprite.file));
+		//spriteSelect.options.add(new Option(eachSprite.name, eachSprite.file));
 		spriteSelect2.options.add(new Option(eachSprite.name, eachSprite.file));
+		spriteSelect2.options[spriteSelect2.options.length-1].setAttribute('preview',eachSprite.preview);
 	});
+
+	spriteSelect2.addEventListener("change", function() {
+		var selectedSprite = spriteSelect2[spriteSelect2.selectedIndex];
+		if(spriteSelect2.selectedIndex > 1) {
+			parent.postMessage({"action": "setPreview", "url": selectedSprite.getAttribute('preview')}, "https://alttpr.hiimcody1.com/");
+			//parent.document.getElementById("sprite-preview").setAttribute('src',spriteSelect2[spriteSelect2.selectedIndex].getAttribute('preview'));
+		} else {
+			if(selectedSprite.getAttribute('value') == "custom")
+				el('input-file-sprite').style.display = 'block';
+			parent.postMessage({"action": "setPreview", "url": "https://static.hiimcody1.com/images/Random.png"}, "https://alttpr.hiimcody1.com/");
+		}
+	})
 
 	indexedDb = new IndexedDb();
 	
@@ -264,7 +333,7 @@ function _readPatchFile(){
 			}
 		}*/
 
-		setTabCreateEnabled(true);
+		window.setTimeout(()=>{setTabCreateEnabled(true);}, 30);
 	}
 }
 
@@ -273,15 +342,32 @@ function _readPatchFile(){
 
 
 function preparePatchedRom(originalRom, patchedRom){
-	patchedRom.fileName=patchFile.fileName.replace(/\.([^\.]*?)$/, '.sfc');
+	//patchedRom.fileName=patchFile.fileName.replace(/\.([^\.]*?)$/, '.sfc');
+	patchedRom.fileName=SeedName.replace("{mode}",SeedMode).replace("{hash}",SeedHash).replace(/[^ A-z0-9_-]/g,"")+".sfc";
 	patchedRom.fileType=originalRom.fileType;
 
+	//Fetch self-hosted ALTTPR data if needed
+	if(jsonPatch !== null) {
+	
+	if (jsonPatch && jsonPatch.length) {
+        jsonPatch.forEach((value, index) => {
+          for (let address in value) {
+            patchedRom.seekWriteBytes(Number(address), value[address]);
+          }
+        });
+      }
+	}
 	// Adjust the ROM
 	fetchSpriteData(patchedRom,indexedDb.obj.sprite,
 		(rom,sprite) => {
 				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
-					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,sprite,
-					indexedDb.obj.owp,indexedDb.obj.uwp);
+					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
+					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
+					indexedDb.obj.owp,indexedDb.obj.uwp,indexedDb.obj.sfx,indexedDb.obj.chicken);
+				console.log([rom,indexedDb.obj.beep,indexedDb.obj.color,
+					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
+					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
+					indexedDb.obj.owp,indexedDb.obj.uwp,indexedDb.obj.sfx,indexedDb.obj.chicken]);
 				setMessage('create');
 				rom.save();
 	});
@@ -293,7 +379,8 @@ function adjustPatch(romToAdjust){
 	fetchSpriteData(romToAdjust,indexedDb.obj.sprite,
 		(rom,sprite) => {
 				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
-					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,sprite,
+					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
+					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
 					indexedDb.obj.owp,indexedDb.obj.uwp);
 				setMessage('apply');
 				rom.save();
@@ -335,8 +422,6 @@ function applyPatch(p,r){
 }
 
 
-
-
 /* GUI functions */
 function setMessage(tab, msg, className){
 	var messageBox=el('message-'+tab);
@@ -375,6 +460,7 @@ function setTabCreateEnabled(status){
 	}
 }
 function setTabApplyEnabled(status){
+	return;
 	if(romFile && status){
 		setElementEnabled('button-apply', status);
 	}else{

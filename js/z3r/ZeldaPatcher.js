@@ -1,14 +1,39 @@
-function zeldaPatcher(rom, beepRate, heartColor, isQuickswap, menuSpeed, isMusicDisabled, sprite, owPalettes, uwPalettes){
+function zeldaPatcher(rom, beepRate, heartColor, isQuickswap, menuSpeed, isMusicDisabled, isMSUResume, isFlashingReduced, sprite, owPalettes, uwPalettes, isSFXShuffle, isCluckerizer){
+  this.rand = new Prando(SeedHash);
   quickswapPatch(rom,isQuickswap);
   musicPatch(rom, isMusicDisabled);
-  menuSpeedPatch(rom,menuSpeed);
+  resumePatch(rom,isMSUResume);
+  flashingPatch(rom,isFlashingReduced);
+
+  //Not race legal so we aren't exposing this option unless it isn't a race
+  if(document.getElementById("menuspeed2l").style.display == "block")
+    menuSpeedPatch(rom,menuSpeed);
   heartBeepPatch(rom,beepRate);
   heartColorPatch(rom,heartColor);
   if(sprite){
     spritePatch(rom,sprite);
   }
   vanillaPalette(rom);
-  paletteShufflePatch(rom, uwPalettes, owPalettes);
+
+  console.log(owPalettes);
+  paletteShufflePatch(rom, owPalettes, this.rand.nextInt(0, 4294967295));
+  this.rand.reset();
+
+  var romData = rom.seekReadBytes(0, rom.fileSize);
+  romData = addTidus(romData);
+  rom.seekWriteBytes(0,romData);
+  
+  let sfx = new SFX(this.rand.nextInt(0, 4294967295));
+  if(isSFXShuffle) {
+    //Not race legal so we aren't exposing this option unless it isn't a race
+    let cluckerizer = document.getElementById("menuspeed2l").style.display == "block" ? isCluckerizer : false;
+    console.log((cluckerizer ? "Cluck cluck" : "Shuffling sfx"));
+    var romData = rom.seekReadBytes(0, rom.fileSize);
+    romData = sfx.randomize_sfx(romData, cluckerizer); 
+    rom.seekWriteBytes(0,romData);
+  }
+  this.rand.reset();
+
   writeCrc(rom);
 }
 
@@ -83,10 +108,37 @@ function musicPatch(rom, isMusicDisabled){
   });
 }
 
+function resumePatch(rom, isMSUResume){
+  rom.seekWriteU8(0x18021D,isMSUResume ? 0x08 : 0x00);
+  rom.seekWriteU8(0x18021E,isMSUResume ? 0x07 : 0x00);
+}
+
+function flashingPatch(rom, isFlashingReduced){
+  rom.seekWriteU8(0x18017F,isFlashingReduced ? 0x01 : 0x00);
+}
+
 function spritePatch(rom, sprite){
   rom.seekWriteBytes(0x80000, sprite.sprite);
   rom.seekWriteBytes(0xDD308, sprite.palette);
   rom.seekWriteBytes(0xDEDF5, sprite.glovePalette);
+  if(sprite.author && rom.fileSize>=0x200000){
+    rom.seek(0x118000);
+    if(rom.readU8()!==0x02 || rom.readU8()!==0x37){
+      return;
+    }
+    rom.seek(0x11801E);
+    if(rom.readU8()!==0x02 || rom.readU8()!==0x37){
+      return;
+    }
+    rom.seek(0x118002);
+    for(var i=0; i<28; i++){
+      rom.writeU8(sprite.author[i][0]);
+    }
+    rom.seek(0x118020);
+    for(var i=0; i<28; i++){
+      rom.writeU8(sprite.author[i][1]);
+    }
+  }
 }
 
 function writeCrc(rom){
@@ -105,8 +157,20 @@ function writeCrc(rom){
 
 const z3pr = window.z3pr;
 const randomizePalette = z3pr.randomize;
-function paletteShufflePatch(rom, uwPalettes, owPalettes) {
+function paletteShufflePatch(rom, uwPalettes, rand) {
+  if(!uwPalettes)
+    return;
+    
+  var romData = rom.seekReadBytes(0, rom.fileSize);
+  romData = randomizePalette(romData, {
+    mode: 'maseya',
+    randomize_overworld: true,
+    randomize_dungeon: true,
+    seed: rand
+  });
+  rom.seekWriteBytes(0,romData);
   // TODO: revert any changes when choosing none
+  /*
   var options = {randomize_dungeon: true};
   switch(uwPalettes){
     case 'none':
@@ -143,6 +207,7 @@ function paletteShufflePatch(rom, uwPalettes, owPalettes) {
   romData = randomizePalette(romData, options);
 
   rom.seekWriteBytes(0,romData);
+  */
 }
 
 function vanillaPalette(rom) {
@@ -151,6 +216,27 @@ function vanillaPalette(rom) {
   for(let i=0; i<vanillaOwPaletteData2.addresses.length; i++){
     rom.seekWriteBytes(vanillaOwPaletteData2.addresses[i],vanillaOwPaletteData2.data[i]);
   }
+}
+
+function addTidus(rom) {
+  let tidus = {"FileName": "tidus.brr","FileBytes": "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"}
+  return tidus;
+}
+
+function seekWriteAndConvert(rom, seek, bytes) {
+  //bytes = snes_to_pc(bytes);
+  if (!Array.isArray(bytes)) {
+      rom[snes_to_pc(seek)] = bytes;
+      return rom;
+  }
+  for (var i = 0; i < bytes.length; i++) {
+      rom[snes_to_pc(seek) + i] = bytes[i];
+  }
+  return rom;
+}
+
+function snes_to_pc(value) {
+  return ((value & 0x7F0000) >> 1) | (value & 0x7FFF);
 }
 
 const vanillaOwPaletteData = [165,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

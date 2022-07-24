@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>LttP Adjuster and Patcher</title>
+	<meta http-equiv="content-Type" content="text/html; charset=UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+	<link rel="manifest" href="manifest.json"/>
+	<link rel="shortcut icon" href="style/favicon.png" type="image/png" sizes="16x16"/>
+	<link rel="shortcut icon" href="style/logo192.png" type="image/png" sizes="192x192"/>
+	<!-- iOS icons -->
+	<link rel="apple-touch-icon" sizes="57x57" href="style/logo114.png" />
+	<link rel="apple-touch-icon" sizes="114x114" href="style/logo114.png" />
+	<link rel="apple-touch-icon" sizes="72x72" href="style/logo144.png" />
+	<link rel="apple-touch-icon" sizes="144x144" href="style/logo144.png" />
+	<link rel="apple-touch-icon" href="style/logo192.png" />
+
+	<link type="text/css" rel="stylesheet" href="style/RomPatcher.css" media="all"/>
+	<script type="text/javascript" src="js/RomPatcher.js"></script>
+	<script type="text/javascript" src="js/MarcFile.js"></script>
+	<script type="text/javascript" src="js/crc.js"></script>
+	<script type="text/javascript" src="js/indexedDb.js"></script>
+	<!-- Prando should allow for identical RNG values to the ALTTPR ROM Customizer -->
+	<script type="text/javascript" src="js/Prando.js"></script>
+	<!-- Babel Dependency for Z3PR -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-polyfill/7.12.1/polyfill.min.js" integrity="sha512-uzOpZ74myvXTYZ+mXUsPhDF+/iL/n32GDxdryI2SJronkEyKC8FBFRLiBQ7l7U/PTYebDbgTtbqTa6/vGtU23A==" crossorigin="anonymous"></script>
+	<script type="text/javascript" src="js/z3r/z3pr-umd.js"></script>
+	<script type="text/javascript" src="js/z3r/ZeldaSprite.js"></script>
+	<script type="text/javascript" src="js/z3r/ZeldaPatcher.js"></script>
+	<script type="text/javascript" src="js/z3r/sfx.js"></script>
+	<script type="text/javascript" src="js/formats/zip.js"></script>
+	<script type="text/javascript" src="js/formats/ips.js"></script>
+	<script type="text/javascript" src="js/formats/ups.js"></script>
+	<script type="text/javascript" src="js/formats/aps.js"></script>
+	<script type="text/javascript" src="js/formats/bps.js"></script>
+	<script type="text/javascript" src="js/formats/rup.js"></script>
+	<script type="text/javascript" src="js/formats/ppf.js"></script>
+	<script type="text/javascript" src="js/formats/pmsr.js"></script>
+	<script type="text/javascript" src="js/formats/vcdiff.js"></script>
+	<script type="text/javascript" src="js/zip.js/zip.js"></script>
+
+	<script type="text/javascript">
+		const queryString = window.location.search;
+		const urlParams = new URLSearchParams(queryString);
+
+		function sanitize(string) {
+			const map = {
+				'&': '&amp;',
+				'<': '&lt;',
+				'>': '&gt;',
+				'"': '&quot;',
+				"'": '&#x27;',
+				"/": '&#x2F;',
+				"`": '&grave;',
+			};
+			const reg = /[&<>"'/]/ig;
+			return string.replace(reg, (match)=>(map[match]));
+		}
+
+		const patch_path = urlParams.get('patch')
+		const patch_name = sanitize(patch_path.substring(patch_path.lastIndexOf('/')+1))
+
+		var PREDEFINED_PATCHES = [{
+			patch: patch_path,
+			name: patch_name,
+		}];
+
+		var jsonPatch = false;
+		if(urlParams.get('json')) {
+			//We have an alttpr json patch
+			fetchJsonPatch(urlParams.get('json'));
+		}
+
+		var SeedName = "alttpr(custom) - {mode}__{hash}";
+		var SeedMode = "True Pot Hunt";
+		var SeedHash = "NoHash";
+		if(urlParams.get('hash')) {
+			SeedHash=urlParams.get('hash');
+		}
+		window.addEventListener('message', function(e) {
+			console.log(e);
+			switch(e.data.action) {
+				case "showChicken":
+					document.getElementById("sfx2l").style.display="block";
+					document.getElementById("sfx2r").style.display="block";
+					break;
+				case "showMenuSpeed":
+					document.getElementById("menuspeed2l").style.display="block";
+					document.getElementById("menuspeed2r").style.display="block";
+					break;
+				default:
+					break;
+			}
+		}, false);
+	</script>
+
+</head>
+<body><div id="column">
+
+<!-- APP -->
+<div id="wrapper">
+  <div id="switch-container"></div>
+	<div id="tab0" class="tab">
+		<div class="row" id="row-input-file-jp">
+			<div class="leftcol"><label for="input-file-jp">JP 1.0 ROM file:</label></div>
+			<div class="rightcol">
+				<input type="file" id="input-file-jp" accept=".sfc" />
+			</div>
+		</div>
+		<div class="row" id="row-input-file-patch">
+				<div class="leftcol"><label for="input-file-patch">Patch file:</label></div>
+				<div class="rightcol">
+					<input type="file" id="input-file-patch" accept=".ips,.ups,.bps,.aps,.rup,.ppf,.mod,.xdelta,.zip" />
+				</div>
+			</div>
+			<div class="row" id="row-options2">
+				<div class="leftcol">Item Quickswap:</div>
+				<div class="rightcol">
+					<input type="checkbox" id="checkbox-quickswap2" />
+				</div>
+				<div class="leftcol">Background Music:</div>
+				<div class="rightcol">
+					<input type="checkbox" id="checkbox-music2" />
+				</div>
+				<div class="leftcol">MSU-1 Resume:</div>
+				<div class="rightcol">
+					<input type="checkbox" id="checkbox-resume2" />
+				</div>
+				<div class="leftcol">Reduce Flashing:</div>
+				<div class="rightcol">
+					<input type="checkbox" id="checkbox-flashing2" />
+				</div>
+				<div class="leftcol">Shuffle SFX:</div>
+				<div class="rightcol">
+					<input type="checkbox" id="checkbox-sfx2" />
+				</div>
+				<div class="leftcol" id="sfx2l" style="display: none;">Cluckerizer:</div>
+				<div class="rightcol" id="sfx2r" style="display: none;">
+					<input type="checkbox" id="checkbox-sfx-chicken2" />
+				</div>
+				<div class="leftcol">Shuffle Palettes:</div>
+				<div class="rightcol">
+					<input type="checkbox" id="checkbox-owpalettes2" />
+				</div>
+				<div class="leftcol">Sprite:</div>
+				<div class="rightcol">
+					<select id="select-sprite2">
+					</select><br /><small>Sprite not listed? <a href="http://alttp.mymm1.com/sprites/" target="_blank">Try here</a> and then upload it below</small><input style="display:none;" type="file" id="input-file-sprite" accept=".zspr" />
+				</div>
+				<div class="leftcol">Heart Color:</div>
+				<div class="rightcol">
+					<select id="select-heartcolor2">
+						<option value="red">Red</option>
+						<option value="blue">Blue</option>
+						<option value="green">Green</option>
+						<option value="yellow">Yellow</option>
+						<option value="random">Random</option>
+					</select>
+				</div>
+				<div class="leftcol">Heart Beep Rate:</div>
+				<div class="rightcol">
+					<select id="select-beep2">
+						<option value="off">Off</option>
+						<option value="double">Double Speed</option>
+						<option value="normal">Normal Speed</option>
+						<option value="half">Half Speed</option>
+						<option value="quarter">Quarter Speed</option>
+					</select>
+				</div>
+					<div class="leftcol" id="menuspeed2l" style="display: none;">Menu Speed:</div>
+					<div class="rightcol" id="menuspeed2r" style="display: none;">
+						<select id="select-menuspeed2">
+							<option value="instant">Instant</option>
+							<option value="quadruple">Quadruple Speed</option>
+							<option value="triple">Triple Speed</option>
+							<option value="double">Double Speed</option>
+							<option value="normal">Normal Speed</option>
+							<option value="half">Half Speed</option>
+						</select>
+					</div>
+				<!--
+				<div class="leftcol">Overworld+Underworld Palettes:</div>
+				<div class="rightcol">
+					<select id="select-owpalettes2">
+						<option value="none">Default</option>
+						<option value="shuffled">Random</option>
+					</select>
+				</div>
+				-->
+				<!--
+				<div class="leftcol">Underworld Palettes:</div>
+				<div class="rightcol">
+					<select id="select-uwpalettes2">
+						<option value="none">Default</option>
+						<option value="shuffled">Random</option>
+						<option value="legacy">Random Legacy</option>
+						<option value="grayscale">Grayscale</option>
+						<option value="puke">Puke</option>
+						<option value="blackout">Blackout</option>
+					</select>
+				</div>
+				-->
+			</div>
+
+		<div class="buttons">
+			<span id="message-create" class="message"></span>
+			<button id="button-leave" class="enabled" onclick="parent.postMessage({'action': 'switchUrl', 'url': 'https://alttpr.hiimcody1.com/generate/begin'}, 'https://alttpr.hiimcody1.com/');">Generate Another Seed</button><button id="button-create" class="disabled" disabled onclick="applyPatch(patch, romFile1, false)" data-localize="create_patch">Save ROM</button>
+		</div>
+	</div>
+</div>
+
+
+
+
+
+<!-- FOOTER -->
+<!--
+<footer>
+	Based on LttP Adjuster and Patcher by <a href="https://www.twitch.tv/kyong92">Kyong</a><br />
+	Which is based on <a href="https://www.marcrobledo.com/RomPatcher.js/">Rom Patcher JS</a> <small>v2.4</small> by <a href="https://www.marcrobledo.com/">Marc Robledo</a>
+	<br />	
+</footer>
+-->
+</div></body></html>
