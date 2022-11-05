@@ -87,6 +87,10 @@
 					document.getElementById("menuspeed2l").style.display="block";
 					document.getElementById("menuspeed2r").style.display="block";
 					break;
+				case "showTriforce":
+					document.getElementById("tph-pieces2l").style.display="block";
+					document.getElementById("tph-pieces2r").style.display="block";
+					break;
 				default:
 					break;
 			}
@@ -144,7 +148,7 @@
 				<div class="leftcol">Sprite:</div>
 				<div class="rightcol">
 					<select id="select-sprite2">
-					</select><br /><small>Sprite not listed? <a href="http://alttp.mymm1.com/sprites/" target="_blank">Try here</a> and then upload it below</small><input style="display:none;" type="file" id="input-file-sprite" accept=".zspr" />
+					</select><br /><small>Sprite not listed? <a href="http://alttp.mymm1.com/sprites/" target="_blank">Try here</a> and then upload it below after selecting [Custom Sprite] above</small><input style="display:none;" type="file" id="input-file-sprite" accept=".zspr" />
 				</div>
 				<div class="leftcol">Heart Color:</div>
 				<div class="rightcol">
@@ -175,6 +179,23 @@
 							<option value="double">Double Speed</option>
 							<option value="normal">Normal Speed</option>
 							<option value="half">Half Speed</option>
+						</select>
+					</div>
+					<div class="leftcol" id="tph-pieces2l" style="display: none;">Triforce Hunt Graphics:</div>
+					<div class="rightcol" id="tph-pieces2r" style="display: none;">
+						<select id="select-tph-pieces2">
+							<option value="default">[Default]</option>
+							<option value="bigkey">Big Key</option>
+							<option value="chicken">Chicken</option>
+							<option value="corn">Corn</option>
+							<!--<option value="scotlandflag">Flag of Scotland</option>-->
+							<option value="flippers">Flippers</option>
+							<option value="lamp">Lamp</option>
+							<option value="mirror">Mirror</option>
+							<option value="mirrorshield">Mirror Shield</option>
+							<option value="pearl">Moon Pearl</option>
+							<option value="mushroom">Mushroom</option>
+							<option value="ms">Sword (Progressive 2)</option>
 						</select>
 					</div>
 				<!--

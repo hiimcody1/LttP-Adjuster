@@ -58,7 +58,7 @@ function fetchSpriteData(rom, spriteUrl, onLoad){
   } else { 
     fetch(spriteUrl)
       .then(response => checkStatus(response) && response.arrayBuffer())
-      .then(buffer => {    
+      .then(buffer => {
         var sprite = new Sprite();      
         var spriteData = new MarcFile(buffer);
         spriteData.littleEndian = true;
@@ -100,6 +100,79 @@ function fetchSpriteData(rom, spriteUrl, onLoad){
       })
       .catch(err => console.error(err));
   }
+}
+
+function fetchTriforceSpriteData(rom, spriteUrl){
+  return new Promise(function(resolve,reject) {
+      if (spriteUrl === 'random') {
+        //This isn't functioning at the moment!
+        let rnd = Math.floor(Math.random() * (spriteDatabase.length - 2)) + 1;
+        if (rnd < 1) // removing vanilla link for now
+          rnd++;
+        spriteUrl = spriteDatabase[rnd].file;
+      }
+
+      if (spriteUrl === 'default') {
+        resolve(rom);
+      } else {
+        let spriteBaseName = spriteUrl;
+        spriteUrl = "https://static.hiimcody1.com/alttp/triforce/"+spriteUrl+".gfx.CMP";
+        fetch(spriteUrl)
+          .then(response => checkStatus(response) && response.arrayBuffer())
+          .then(buffer => {      
+            var spriteData = new MarcFile(buffer);
+            //spriteData.littleEndian = true;
+
+            let romData = rom.seekReadBytes(0,rom.fileSize);
+            let sprite = spriteData.seekReadBytes(0,spriteData.fileSize);
+            let offset = 0x18A800;
+
+            //Nuke existing sprite data
+            for(let pos=0; pos < 1024; pos++) {
+              //console.log("Writing 0x00 to "+offset+pos+" in romData...");
+              romData[offset+pos] = 0x00; 
+            }
+            //rom.seek(offset);
+            for(let pos=0; pos < sprite.length; pos++) {
+              //console.log("Writing "+sprite[pos]+" to "+offset+pos+" in romData...");
+              romData[offset+pos] = sprite[pos];
+            }
+
+            let palettes = {
+              red:    [1,2],
+              green:  [4,8],
+              blue:   [2,4],
+            }
+
+            let paletteOffset = 0x100C3C;
+            //let paletteOffsetOW = 0x1026B3; //TODO, needs new offset
+            let paletteOffsetOW = 0x1029F8; //Current for DR Unstable as of 08/27/2022
+            console.log(spriteBaseName);
+            switch(spriteBaseName) {
+                case "pearl":
+                case "lamp":
+                  //https://pour.salton.me/FP3gRX.png
+                  romData[paletteOffset] = palettes.red[0];
+                  romData[paletteOffsetOW] = palettes.red[1];
+                  break;
+                case "ms":
+                case "scotlandflag":
+                case "flippers":
+                case "mirror":
+                  //https://pour.salton.me/FP3gRX.png
+                  romData[paletteOffset] = palettes.blue[0];
+                  romData[paletteOffsetOW] = palettes.blue[1];
+                  break;
+                default:
+                  break;
+            }
+
+            rom.seekWriteBytes(0,romData);
+            resolve(rom);
+          })
+          .catch(err => reject(err));
+      }
+  });
 }
 
 function parseZspr(sprite, fileData){
