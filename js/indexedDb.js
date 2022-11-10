@@ -4,6 +4,7 @@ function IndexedDb(){
   this.obj = {
     jp_file: null,
     sprite_file: null,
+    sprite_file_name: null,
     quickswap: true,
     music: true,
     resume: true,
@@ -91,6 +92,10 @@ IndexedDb.prototype.loadSprite = function(){
         array[k] = bin.charCodeAt(k);
       }
       spriteFile = new MarcFile(array);
+      var small = document.createElement("small");
+      small.innerHTML = "<br />Cached Custom: " + this.obj.sprite_file_name + "<br />";
+      //document.getElementById("input-file-sprite").before(small);
+      document.getElementById("select-sprite2").options[1].innerHTML = "[Custom] - " + this.obj.sprite_file_name;
     }
     catch(e){}
   }
@@ -114,6 +119,7 @@ IndexedDb.prototype.setFormValues = function(){
   el('checkbox-sfx-chicken2').checked = this.obj.chicken;
   el('checkbox-owpalettes2').checked = this.obj.owp;
   el('select-menuspeed2').value = this.obj.speed;
+  el('select-tph-pieces2').value = this.obj.tphSprite;
 }
 
 IndexedDb.prototype.save = function(tab){
@@ -130,6 +136,7 @@ IndexedDb.prototype.save = function(tab){
   this.obj.sfx = el('checkbox-sfx'+id).checked;
   this.obj.chicken = el('checkbox-sfx-chicken2').checked;
   this.obj.speed = el('select-menuspeed'+id).value;
+  this.obj.tphSprite = el('select-tph-pieces'+id).value;
   this.obj.owp = el('checkbox-owpalettes'+id).checked;
   this.obj.uwp = this.obj.owp;
 
@@ -161,12 +168,15 @@ IndexedDb.prototype.saveJpRom = function(){
 }
 
 IndexedDb.prototype.saveSprite = function(){
-  if(!this.obj.sprite_file && spriteFile){
+  if(spriteFile){
     var bin = '';
     var array = spriteFile._u8array;
     for(var k=0; k<array.length; k++){
       bin += String.fromCharCode(array[k]);
     }
-    this.obj.sprite_file = btoa(bin);
+    if(this.obj.sprite_file !== btoa(bin)) {
+      this.obj.sprite_file = btoa(bin);
+      this.obj.sprite_file_name = document.getElementById("input-file-sprite").files[0].name;
+    }
   }
 }
