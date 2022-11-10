@@ -358,18 +358,26 @@ function preparePatchedRom(originalRom, patchedRom){
       }
 	}
 	// Adjust the ROM
-	fetchSpriteData(patchedRom,indexedDb.obj.sprite,
-		(rom,sprite) => {
-				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
-					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
-					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
-					indexedDb.obj.owp,indexedDb.obj.uwp,indexedDb.obj.sfx,indexedDb.obj.chicken);
-				console.log([rom,indexedDb.obj.beep,indexedDb.obj.color,
-					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
-					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
-					indexedDb.obj.owp,indexedDb.obj.uwp,indexedDb.obj.sfx,indexedDb.obj.chicken]);
-				setMessage('create');
-				rom.save();
+	let tphSprite = document.getElementById("select-tph-pieces2").value;
+	
+	if(document.getElementById("select-tph-pieces2").parentElement.style.display!=="block")
+		tphSprite="default";
+	
+	fetchTriforceSpriteData(patchedRom,tphSprite).then((result) => {
+		patchedRom.seekWriteBytes(0,result);
+		fetchSpriteData(patchedRom,indexedDb.obj.sprite,
+			(rom,sprite) => {
+					zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
+						indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
+						indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
+						indexedDb.obj.owp,indexedDb.obj.uwp,indexedDb.obj.sfx,indexedDb.obj.chicken);
+					console.log([rom,indexedDb.obj.beep,indexedDb.obj.color,
+						indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
+						indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
+						indexedDb.obj.owp,indexedDb.obj.uwp,indexedDb.obj.sfx,indexedDb.obj.chicken]);
+					setMessage('create');
+					rom.save();
+		})
 	});
 }
 
