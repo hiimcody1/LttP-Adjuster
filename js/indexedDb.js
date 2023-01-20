@@ -2,17 +2,20 @@ var db;
 
 function IndexedDb(){
   this.obj = {
-    healthBeep: true,
+    jp_file: null,
+    sprite_file: null,
+    sprite_file_name: null,
+    quickswap: true,
     music: true,
-    fastSpell: false,
-    remapUpA: false,
-    removeFlashing: true,
-    spriteFile: null,
-    spriteName: 'link',
-    normalColor: 'default',
-    shieldColor: 'default',
-    beamSprite: 'default',
-    z2Rom: null
+    resume: true,
+    flashing: false,
+    sprite: 'https://alttpr-assets.s3.us-east-2.amazonaws.com/001.link.1.zspr',
+    color: 'red',
+    beep: 'half',
+    speed: 'normal',
+    owp: 'none',
+    uwp: 'none',
+    sfx: false
   };
 
   if (!('indexedDB' in window)){
@@ -49,7 +52,7 @@ IndexedDb.prototype.load = function(){
         });      
       }
   
-      this.loadZ2Rom();
+      this.loadJpRom();
       this.loadSprite();
       this.setFormValues();
     }
@@ -58,84 +61,22 @@ IndexedDb.prototype.load = function(){
   }
 }
 
-IndexedDb.prototype.loadZ2Rom = function(){
-  if(this.obj.z2Rom){
-    var header= 0x10;
-    var size = 0x3c00f;
-    var trimmedCrc = '8b5a9d69';
-
+IndexedDb.prototype.loadJpRom = function(){
+  if(this.obj.jp_file){
     try{
-      var bin = atob(this.obj.z2Rom);
-
-      if(bin.length > size+header) {
-        //Try to re-arrange the rom to make it work
-      }
-
+      var bin = atob(this.obj.jp_file);
       var array = new Uint8Array(bin.length);
       for(var k=0; k<bin.length; k++){
         array[k] = bin.charCodeAt(k);
       }
-
-      
-
       var storedRom = new MarcFile(array);
       var crc = padZeroes(crc32(storedRom, 0), 4);
-      var crcNoHeader = padZeroes(crc32(storedRom, 16), 4);
-      if(crcNoHeader==='ba322865') {
-        //Rom is fine, minus headers, clean it up
-        array = new Uint8Array(bin.length+16);
-
-        array[0] = 0x4E;  //N
-        array[1] = 0x45;  //E
-        array[2] = 0x53;  //S
-        array[3] = 0x1A;  //EOF
-        array[4] = 0x08;  //PRG SIZE
-        array[5] = 0x10;  //CHR SIZE
-        array[6] = 0x12;  //MAPPER,MIRRORING,BATTERY,TRAINER -> MAPS TO: 00010010 -> Has battery, Ignore mirroring
-
-        //Padding
-        for(var h=7;h<16;h++)
-          array[h] = 0x00;
-        
-        for(var k=16; k<bin.length+16; k++){
-          array[k] = bin.charCodeAt(k);
-        }
-
-        storedRom = new MarcFile(array);
-        crc = padZeroes(crc32(storedRom, 0), 4);
-      }
-
-      if(crc==='ba322865') {
-        //Headerless rom, inject fake header
-        array = new Uint8Array(bin.length+16);
-
-        array[0] = 0x4E;  //N
-        array[1] = 0x45;  //E
-        array[2] = 0x53;  //S
-        array[3] = 0x1A;  //EOF
-        array[4] = 0x08;  //PRG SIZE
-        array[5] = 0x10;  //CHR SIZE
-        array[6] = 0x12;  //MAPPER,MIRRORING,BATTERY,TRAINER -> MAPS TO: 00010010 -> Has battery, Ignore mirroring
-
-        //Padding
-        for(var h=7;h<16;h++)
-          array[h] = 0x00;
-        
-        for(var k=16; k<bin.length+16; k++){
-          array[k] = bin.charCodeAt(k-16);
-        }
-
-        //Lets try again to get the right hash
-        storedRom = new MarcFile(array);
-        crc = padZeroes(crc32(storedRom, 0), 4);
-      } 
-
-      if(crc==='e3c788b0'){
-        //Headered rom
-        romFile = storedRom;
-        el('row-input-file-z2').style.display = 'none';
-      } else {
-        this.obj.z2Rom = null;
+      if(crc==='3322effc'){
+        romFile1 = storedRom;
+        jpCrc = crc;
+        el('row-input-file-jp').style.display = 'none';
+      }else{
+        this.obj.jp_file = null;
       }
     }
     catch(e){}
@@ -143,37 +84,47 @@ IndexedDb.prototype.loadZ2Rom = function(){
 }
 
 IndexedDb.prototype.loadSprite = function(){
-  if(this.obj.spriteFile){
+  if(this.obj.sprite_file){
     try{
-      var bin = atob(this.obj.spriteFile);
+      var bin = atob(this.obj.sprite_file);
       var array = new Uint8Array(bin.length);
       for(var k=0; k<bin.length; k++){
         array[k] = bin.charCodeAt(k);
       }
       spriteFile = new MarcFile(array);
       var small = document.createElement("small");
-      small.innerHTML = "<br />Cached Custom: " + this.obj.spriteName + "<br />";
-      document.getElementById("select-sprite").options[1].innerHTML = "[Custom] - " + this.obj.spriteName;
+      small.innerHTML = "<br />Cached Custom: " + this.obj.sprite_file_name + "<br />";
+      //document.getElementById("input-file-sprite").before(small);
+      document.getElementById("select-sprite2").options[1].innerHTML = "[Custom] - " + this.obj.sprite_file_name;
     }
     catch(e){}
   }
 }
 
 IndexedDb.prototype.setFormValues = function(){
-  el('checkbox-music').checked = this.obj.music;
-  el('checkbox-flashing').checked = this.obj.flashing;
-  el('select-sprite').value = this.obj.sprite;
+  el('checkbox-quickswap2').checked = this.obj.quickswap;
+  el('checkbox-music2').checked = this.obj.music;
+  el('checkbox-resume2').checked = this.obj.resume;
+  el('checkbox-flashing2').checked = this.obj.flashing;
+  el('select-sprite2').value = this.obj.sprite;
   if(this.obj.sprite == "custom" || this.obj.sprite == "random")
-    //parent.postMessage({"action": "setPreview", "url": "https://static.hiimcody1.com/images/Random.png"}, "https://alttpr.hiimcody1.com/");
+    parent.postMessage({"action": "setPreview", "url": "https://static.hiimcody1.com/images/Random.png"}, "https://alttpr.hiimcody1.com/");
     if(this.obj.sprite == "custom")
       el('input-file-sprite').style.display="block";
-  //else
-  //  parent.postMessage({"action": "setPreview", "url": el('select-sprite2')[el('select-sprite2').selectedIndex].getAttribute('preview')}, "https://alttpr.hiimcody1.com/");
+  else
+    parent.postMessage({"action": "setPreview", "url": el('select-sprite2')[el('select-sprite2').selectedIndex].getAttribute('preview')}, "https://alttpr.hiimcody1.com/");
+  el('select-heartcolor2').value = this.obj.color;
+  el('select-beep2').value = this.obj.beep;
+  el('checkbox-sfx2').checked= this.obj.sfx;
+  el('checkbox-sfx-chicken2').checked = this.obj.chicken;
+  el('checkbox-owpalettes2').checked = this.obj.owp;
+  el('select-menuspeed2').value = this.obj.speed;
+  el('select-tph-pieces2').value = this.obj.tphSprite;
 }
 
 IndexedDb.prototype.save = function(tab){
   var id = '2'; 
-  this.saveZ2Rom();
+  this.saveJpRom();
   this.saveSprite();
   this.obj.quickswap = el('checkbox-quickswap'+id).checked;
   this.obj.music = el('checkbox-music'+id).checked;
@@ -205,7 +156,7 @@ IndexedDb.prototype.save = function(tab){
   } 
 }
 
-IndexedDb.prototype.saveZ2Rom = function(){
+IndexedDb.prototype.saveJpRom = function(){
   if(!this.obj.jp_file && romFile1 && jpCrc==='3322effc'){
     var bin = '';
     var array = romFile1._u8array;
@@ -223,9 +174,9 @@ IndexedDb.prototype.saveSprite = function(){
     for(var k=0; k<array.length; k++){
       bin += String.fromCharCode(array[k]);
     }
-    if(this.obj.spriteFile !== btoa(bin)) {
-      this.obj.spriteFile = btoa(bin);
-      this.obj.spriteName = document.getElementById("input-file-sprite").files[0].name;
+    if(this.obj.sprite_file !== btoa(bin)) {
+      this.obj.sprite_file = btoa(bin);
+      this.obj.sprite_file_name = document.getElementById("input-file-sprite").files[0].name;
     }
   }
 }
