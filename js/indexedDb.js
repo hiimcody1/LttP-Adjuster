@@ -60,85 +60,23 @@ IndexedDb.prototype.load = function(){
 
 IndexedDb.prototype.loadZ2Rom = function(){
   if(this.obj.z2Rom){
-    var header= 0x10;
-    var size = 0x3c00f;
-    var trimmedCrc = '8b5a9d69';
-
     try{
       var bin = atob(this.obj.z2Rom);
-
-      if(bin.length > size+header) {
-        //Try to re-arrange the rom to make it work
-      }
 
       var array = new Uint8Array(bin.length);
       for(var k=0; k<bin.length; k++){
         array[k] = bin.charCodeAt(k);
       }
 
-      
-
-      var storedRom = new MarcFile(array);
-      var crc = padZeroes(crc32(storedRom, 0), 4);
-      var crcNoHeader = padZeroes(crc32(storedRom, 16), 4);
-      if(crcNoHeader==='ba322865') {
-        //Rom is fine, minus headers, clean it up
-        array = new Uint8Array(bin.length+16);
-
-        array[0] = 0x4E;  //N
-        array[1] = 0x45;  //E
-        array[2] = 0x53;  //S
-        array[3] = 0x1A;  //EOF
-        array[4] = 0x08;  //PRG SIZE
-        array[5] = 0x10;  //CHR SIZE
-        array[6] = 0x12;  //MAPPER,MIRRORING,BATTERY,TRAINER -> MAPS TO: 00010010 -> Has battery, Ignore mirroring
-
-        //Padding
-        for(var h=7;h<16;h++)
-          array[h] = 0x00;
-        
-        for(var k=16; k<bin.length+16; k++){
-          array[k] = bin.charCodeAt(k);
-        }
-
-        storedRom = new MarcFile(array);
-        crc = padZeroes(crc32(storedRom, 0), 4);
-      }
-
-      if(crc==='ba322865') {
-        //Headerless rom, inject fake header
-        array = new Uint8Array(bin.length+16);
-
-        array[0] = 0x4E;  //N
-        array[1] = 0x45;  //E
-        array[2] = 0x53;  //S
-        array[3] = 0x1A;  //EOF
-        array[4] = 0x08;  //PRG SIZE
-        array[5] = 0x10;  //CHR SIZE
-        array[6] = 0x12;  //MAPPER,MIRRORING,BATTERY,TRAINER -> MAPS TO: 00010010 -> Has battery, Ignore mirroring
-
-        //Padding
-        for(var h=7;h<16;h++)
-          array[h] = 0x00;
-        
-        for(var k=16; k<bin.length+16; k++){
-          array[k] = bin.charCodeAt(k-16);
-        }
-
-        //Lets try again to get the right hash
-        storedRom = new MarcFile(array);
-        crc = padZeroes(crc32(storedRom, 0), 4);
-      } 
-
-      if(crc==='e3c788b0'){
-        //Headered rom
-        romFile = storedRom;
-        el('row-input-file-z2').style.display = 'none';
-      } else {
+      var z2Rom = new Z2Rom(array);
+      if(z2Rom) {
+        this.saveZ2Rom(z2Rom.rom);
+      } else
         this.obj.z2Rom = null;
-      }
+      
+    } catch(e){
+      console.log(e);
     }
-    catch(e){}
   }
 }
 
@@ -160,9 +98,15 @@ IndexedDb.prototype.loadSprite = function(){
 }
 
 IndexedDb.prototype.setFormValues = function(){
-  el('checkbox-music').checked = this.obj.music;
-  el('checkbox-flashing').checked = this.obj.flashing;
-  el('select-sprite').value = this.obj.sprite;
+  this.obj.z2Rom==null ? el('romUpload').classList.remove("d-none") : el('romUpload').classList.add("d-none");
+  this.obj.z2Rom==null ? el('seedInfo').classList.add("d-none") : el('seedInfo').classList.remove("d-none");
+  
+  this.obj.healthBeep ? el('enableHealthBeep').bootstrapToggle('on'): el('enableHealthBeep').bootstrapToggle('off');
+  this.obj.music ? el('enableMusic').bootstrapToggle('on'): el('enableMusic').bootstrapToggle('off');
+  this.obj.fastSpell ? el('useFastSpell').bootstrapToggle('on'): el('useFastSpell').bootstrapToggle('off');
+  this.obj.remapUpA ? el('remapUpA').bootstrapToggle('on'): el('remapUpA').bootstrapToggle('off');
+  this.obj.removeFlashing ? el('disableFlashing').bootstrapToggle('on'): el('disableFlashing').bootstrapToggle('off');
+  return;
   if(this.obj.sprite == "custom" || this.obj.sprite == "random")
     //parent.postMessage({"action": "setPreview", "url": "https://static.hiimcody1.com/images/Random.png"}, "https://alttpr.hiimcody1.com/");
     if(this.obj.sprite == "custom")
@@ -171,24 +115,13 @@ IndexedDb.prototype.setFormValues = function(){
   //  parent.postMessage({"action": "setPreview", "url": el('select-sprite2')[el('select-sprite2').selectedIndex].getAttribute('preview')}, "https://alttpr.hiimcody1.com/");
 }
 
-IndexedDb.prototype.save = function(tab){
-  var id = '2'; 
-  this.saveZ2Rom();
-  this.saveSprite();
-  this.obj.quickswap = el('checkbox-quickswap'+id).checked;
-  this.obj.music = el('checkbox-music'+id).checked;
-  this.obj.resume = el('checkbox-resume'+id).checked;
-  this.obj.flashing = el('checkbox-flashing'+id).checked;
-  this.obj.sprite = el('select-sprite'+id).value;
-  this.obj.color = el('select-heartcolor'+id).value;
-  this.obj.beep = el('select-beep'+id).value;
-  this.obj.sfx = el('checkbox-sfx'+id).checked;
-  this.obj.chicken = el('checkbox-sfx-chicken2').checked;
-  this.obj.speed = el('select-menuspeed'+id).value;
-  this.obj.tphSprite = el('select-tph-pieces'+id).value;
-  this.obj.owp = el('checkbox-owpalettes'+id).checked;
-  this.obj.uwp = this.obj.owp;
-
+IndexedDb.prototype.save = function(){
+  var id = '2';
+  this.obj.healthBeep = el('enableHealthBeep').checked;
+  this.obj.music = el('enableMusic').checked;
+  this.obj.fastSpell = el('useFastSpell').checked;
+  this.obj.remapUpA = el('remapUpA').checked;
+  this.obj.removeFlashing = el('disableFlashing').checked;
   if (db) {
     var tx = db.transaction('configs', 'readwrite');
     var store = tx.objectStore('configs');
@@ -205,14 +138,16 @@ IndexedDb.prototype.save = function(tab){
   } 
 }
 
-IndexedDb.prototype.saveZ2Rom = function(){
-  if(!this.obj.jp_file && romFile1 && jpCrc==='3322effc'){
+IndexedDb.prototype.saveZ2Rom = function(rom){
+  if(!this.obj.jp_file && rom){
     var bin = '';
-    var array = romFile1._u8array;
+    var array = rom._u8array;
     for(var k=0; k<array.length; k++){
       bin += String.fromCharCode(array[k]);
     }
-    this.obj.jp_file = btoa(bin);
+    this.obj.z2Rom = btoa(bin);
+    romFile = rom;
+    this.save();
   }
 }
 

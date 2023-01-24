@@ -1,61 +1,8 @@
 /* Rom Patcher JS v20201106 - Marc Robledo 2016-2020 - http://www.marcrobledo.com/license */
 /* Modified into LttP Adjuster - Fabio Kubagawa */
 
-/* service worker */
-const FORCE_HTTPS=!location.href.startsWith('http://localhost:');
-if(FORCE_HTTPS && location.protocol==='http:')
-	location.href=window.location.href.replace('http:','https:');
-else if(location.protocol==='https:' && 'serviceWorker' in navigator)
-	//Doesn't seem to work right, let's just not even try...
-	//navigator.serviceWorker.register('/LttP-Adjuster/_cache_service_worker.js', {scope: '/LttP-Adjuster/'});
 
-
-
-var romFile, patchFile, patch, romFile1, jpCrc, tempFile, indexedDb, spriteFile;
-var fetchedPatches;
-var CAN_USE_WEB_WORKERS=false;
-var webWorkerApply,webWorkerCrc;
-try{
-	webWorkerApply=new Worker('./js/worker_apply.js');
-	webWorkerApply.onmessage = event => { // listen for events from the worker
-		//retrieve arraybuffers back from webworker		
-		romFile1._u8array=event.data.romFileU8Array;
-		romFile1._dataView=new DataView(romFile._u8array.buffer);
-		
-		patchFile._u8array=event.data.patchFileU8Array;
-		patchFile._dataView=new DataView(patchFile._u8array.buffer);
-				
-		if(event.data.patchedRomU8Array)
-			preparePatchedRom(romFile, new MarcFile(event.data.patchedRomU8Array.buffer));
-
-		setTabApplyEnabled(true);
-		if(event.data.errorMessage)
-			setMessage('apply', event.data.errorMessage.replace('Error: ',''), 'error');
-		else
-			setMessage('apply');
-	};
-	webWorkerApply.onerror = event => { // listen for events from the worker
-		setTabApplyEnabled(true);
-		setMessage('apply', event.message.replace('Error: ',''), 'error');
-	};
-
-	webWorkerCrc=new Worker('./js/worker_crc.js');
-	webWorkerCrc.onmessage = event => { // listen for events from the worker
-		//console.log('received_crc');
-		setMessage('create','');
-		jpCrc=padZeroes(event.data.crc32, 4);
-		if (jpCrc!=='3322effc')
-			setMessage('create','Invalid JP v1.0 ROM', 'error');
-		else
-			setTabCreateEnabled(true);
-	};
-	webWorkerCrc.onerror = event => { // listen for events from the worker
-		setMessage('apply', event.message.replace('Error: ',''), 'error');
-	};
-}catch(e){
-	CAN_USE_WEB_WORKERS=false;
-}
-
+var romFile, patchFile, patch, tempFile, indexedDb, spriteFile;
 
 /* Shortcuts */
 function addEvent(e,ev,f){e.addEventListener(ev,f,false)}
@@ -70,9 +17,7 @@ function fetchPatch(uri){
 
 	var isCompressed=/\#/.test(uri);
 	var patchURI=decodeURI(uri.replace(/\#.*?$/, ''));
-	//console.log(patchURI);
 	var compressedName=uri.replace(/^.*?\#/,'');
-	//console.log(compressedName);
 
 
 	if(typeof window.fetch==='function'){
@@ -156,144 +101,25 @@ function fetchJsonPatch(uri){
 
 /* initialize app */
 addEvent(window,'load',function(){
-	/* zip-js web worker */
-	if(CAN_USE_WEB_WORKERS){
-		zip.useWebWorkers=true;
-		zip.workerScriptsPath='./js/zip.js/';
-	}else{
-		zip.useWebWorkers=false;
+	zip.useWebWorkers=false;
 
-		var script=document.createElement('script');
-		script.src='./js/zip.js/inflate.js';
-		document.getElementsByTagName('head')[0].appendChild(script);
-	}
-	
-	//el('input-file-rom').value='';
-	el('input-file-patch').value='';
-	el('input-file-jp').value='';
-	setTabApplyEnabled(true);
+	var script=document.createElement('script');
+	script.src='/js/zip.js/inflate.js';
+	document.getElementsByTagName('head')[0].appendChild(script);
 
-	/*
-	addEvent(el('input-file-rom'), 'change', function(){
-		romFile=new MarcFile(this);
-		setTabApplyEnabled(true);		
+	el('romfile').value='';
+	addEvent(el('romfile'), 'change', function(e){
+		if (e.target.value)
+			romFile=new Z2Rom(this);
 	});
-	*/
-
-
-	/* dirty fix for mobile Safari https://stackoverflow.com/a/19323498 */
-	if(/Mobile\/\S+ Safari/.test(navigator.userAgent)){
-		el('input-file-patch').accept='';
-	}
-
-
-
-	/* predefined patches */
-	if(typeof PREDEFINED_PATCHES!=='undefined'){
-		fetchedPatches={};
-
-		var container=el('input-file-patch').parentElement;
-		container.removeChild(el('input-file-patch'));
-
-		var select=document.createElement('select');
-		select.id='input-file-patch';
-		for(var i=0; i<PREDEFINED_PATCHES.length; i++){
-			var option=document.createElement('option');
-			option.value=PREDEFINED_PATCHES[i].patch;
-			option.innerHTML=PREDEFINED_PATCHES[i].name;
-			select.appendChild(option);
-		}
-		container.appendChild(select)
-		container.parentElement.title='';
-
-		addEvent(select,'change',function(){
-			if(fetchedPatches[this.value.replace(/\#.*?$/, '')]){
-				patchFile=fetchedPatches[this.value.replace(/\#.*?$/, '')];
-				patchFile.seek(0);
-				_readPatchFile();
-			}else{
-				patch=null;
-				patchFile=null;
-				fetchPatch(this.value);
-			}
-		});
-		fetchPatch(select.value);
-	}else{
-		el('input-file-patch').value='';
-
-		el('switch-container').style.visibility='visible';
-		
-		addEvent(el('input-file-patch'), 'change', function(){
-			setTabCreateEnabled(false);
-			patchFile=new MarcFile(this, _readPatchFile);
-		});
-	}
-
-	el('input-file-jp').value='';
-	addEvent(el('input-file-jp'), 'change', function(e){
-		if (e.target.value){
-			setTabCreateEnabled(false);
-			romFile1=new MarcFile(this, function(){
-				if(romFile1.fileSize%1024===512){
-					romFile1=romFile1.slice(512);
-				}
-				verifyJpRom(romFile1,0);
-			});
-			
-		}
-	});
-
-	el('input-file-sprite').value='';
-	addEvent(el('input-file-sprite'), 'change', function(e){
-		if (e.target.value){
-			spriteFile =new MarcFile(this);
-		}
-	});
-
-	//var spriteSelect = el('select-sprite');
-	var spriteSelect2 = el('select-sprite2');
-	spriteDatabase.forEach(eachSprite => {
-		//spriteSelect.options.add(new Option(eachSprite.name, eachSprite.file));
-		spriteSelect2.options.add(new Option(eachSprite.name, eachSprite.file));
-		spriteSelect2.options[spriteSelect2.options.length-1].setAttribute('preview',eachSprite.preview);
-	});
-
-	spriteSelect2.addEventListener("change", function() {
-		var selectedSprite = spriteSelect2[spriteSelect2.selectedIndex];
-		if(spriteSelect2.selectedIndex > 1) {
-			parent.postMessage({"action": "setPreview", "url": selectedSprite.getAttribute('preview')}, "https://alttpr.hiimcody1.com/");
-			//parent.document.getElementById("sprite-preview").setAttribute('src',spriteSelect2[spriteSelect2.selectedIndex].getAttribute('preview'));
-		} else {
-			if(selectedSprite.getAttribute('value') == "custom")
-				el('input-file-sprite').style.display = 'block';
-			parent.postMessage({"action": "setPreview", "url": "https://static.hiimcody1.com/images/Random.png"}, "https://alttpr.hiimcody1.com/");
-		}
-	})
 
 	indexedDb = new IndexedDb();
 	
 });
 
-function verifyJpRom(file, startOffset){
-	setTabCreateEnabled(false);
-	if(CAN_USE_WEB_WORKERS){		
-		webWorkerCrc.postMessage({u8array:file._u8array, startOffset:startOffset}, [file._u8array.buffer]);
-	}else{
-		setMessage('create','');
-		window.setTimeout(()=>{
-			jpCrc=padZeroes(crc32(file, startOffset), 4);
-			if (jpCrc!=='3322effc')
-				setMessage('create','Invalid JP v1.0 ROM', 'error');
-			else
-				setTabCreateEnabled(true);
-		}, 30);
-	}
-}
-
-
 function _readPatchFile(){
-	setMessage('create','');
-	setTabCreateEnabled(false);
+	//setMessage('create','');
+	//setTabCreateEnabled(false);
 	patchFile.littleEndian=false;
 
 	var header=patchFile.readString(6);
@@ -304,7 +130,7 @@ function _readPatchFile(){
 			parseZIPFile(patchFile);
 		}
 		patch=false;
-		setTabCreateEnabled(false);
+		//setTabCreateEnabled(false);
 	}else{
 		if(header.startsWith(IPS_MAGIC)){
 			patch=parseIPSFile(patchFile);
@@ -327,58 +153,25 @@ function _readPatchFile(){
 			setMessage('create', 'Invalid patch file', 'error');
 		}
 
+
+
 		/*if(patch && typeof PREDEFINED_PATCHES!=='undefined' && PREDEFINED_PATCHES[el('input-file-patch').selectedIndex].crc){
 			patch.validateSource=function(romFile, headerSize){
 				return PREDEFINED_PATCHES[el('input-file-patch').selectedIndex].crc===crc32(romFile, headerSize)
 			}
 		}*/
 
-		window.setTimeout(()=>{setTabCreateEnabled(true);}, 30);
+		//window.setTimeout(()=>{setTabCreateEnabled(true);}, 30);
 	}
 }
 
-
-
-
-
 function preparePatchedRom(originalRom, patchedRom){
 	//patchedRom.fileName=patchFile.fileName.replace(/\.([^\.]*?)$/, '.sfc');
-	patchedRom.fileName=SeedName.replace("{mode}",SeedMode).replace("{hash}",SeedHash).replace(/[^ A-z0-9_-]/g,"")+".sfc";
+	patchedRom.fileName=seedName;
 	patchedRom.fileType=originalRom.fileType;
-
-	//Fetch self-hosted ALTTPR data if needed
-	if(jsonPatch !== null) {
-	
-	if (jsonPatch && jsonPatch.length) {
-        jsonPatch.forEach((value, index) => {
-          for (let address in value) {
-            patchedRom.seekWriteBytes(Number(address), value[address]);
-          }
-        });
-      }
-	}
-	// Adjust the ROM
-	let tphSprite = document.getElementById("select-tph-pieces2").value;
-	
-	if(document.getElementById("select-tph-pieces2").parentElement.style.display!=="block")
-		tphSprite="default";
-	
-	fetchTriforceSpriteData(patchedRom,tphSprite).then((result) => {
-		patchedRom.seekWriteBytes(0,result);
-		fetchSpriteData(patchedRom,indexedDb.obj.sprite,
-			(rom,sprite) => {
-					zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
-						indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
-						indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
-						indexedDb.obj.owp,indexedDb.obj.uwp,indexedDb.obj.sfx,indexedDb.obj.chicken);
-					console.log([rom,indexedDb.obj.beep,indexedDb.obj.color,
-						indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
-						indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
-						indexedDb.obj.owp,indexedDb.obj.uwp,indexedDb.obj.sfx,indexedDb.obj.chicken]);
-					setMessage('create');
-					rom.save();
-		})
-	});
+	patchedRom = z2Patcher(patchedRom,!document.getElementById("enableHealthBeep").checked,!document.getElementById("enableMusic").checked,document.getElementById("useFastSpell").checked,document.getElementById("remapUpA").checked,document.getElementById("disableFlashing").checked);
+	patchedRom.save();
+	indexedDb.save();
 }
 
 function adjustPatch(romToAdjust){
@@ -396,34 +189,16 @@ function adjustPatch(romToAdjust){
 }
 
 function applyPatch(p,r){
-	indexedDb.save('create');
 	if(p && r){
-		if(CAN_USE_WEB_WORKERS){
-			setMessage('create', 'Applying patch...', 'loading');
-			setTabApplyEnabled(false);
+		setMessage('create', 'Applying patch...', 'loading');
 
-			webWorkerApply.postMessage(
-				{
-					romFileU8Array:r._u8array,
-					patchFileU8Array:patchFile._u8array
-				},[
-					r._u8array.buffer,
-					patchFile._u8array.buffer
-				]
-			);
+		try{
+			p.apply(r);
+			preparePatchedRom(r, p.apply(r));
 
-		}else{
-			setMessage('create', 'Applying patch...', 'loading');
-
-			try{
-				p.apply(r);
-				preparePatchedRom(r, p.apply(r));
-
-			}catch(e){
-				setMessage('create', 'Error: '+e.message, 'error');
-			}
+		}catch(e){
+			setMessage('create', 'Error: '+e.message, 'error');
 		}
-
 	}else{
 		setMessage('create', 'No ROM/patch selected', 'error');
 	}
@@ -432,6 +207,8 @@ function applyPatch(p,r){
 
 /* GUI functions */
 function setMessage(tab, msg, className){
+	console.log(msg);
+	return;
 	var messageBox=el('message-'+tab);
 	if(msg){
 		if(className==='loading'){
@@ -460,39 +237,6 @@ function setElementEnabled(element,status){
 	}
 	el(element).disabled=!status;
 }
-function setTabCreateEnabled(status){
-	if((patchFile || patch) && romFile1 && status && jpCrc==='3322effc'){
-		setElementEnabled('button-create', status);
-	}else{
-		setElementEnabled('button-create', false);
-	}
-}
-function setTabApplyEnabled(status){
-	return;
-	if(romFile && status){
-		setElementEnabled('button-apply', status);
-	}else{
-		setElementEnabled('button-apply', false);
-	}
-}
-function setCreatorMode(creatorMode){
-	if(creatorMode){
-		el('tab0').style.display='none';
-		el('tab1').style.display='block';
-		el('switch-create').className='switch enabled'
-	}else{
-		el('tab0').style.display='block';
-		el('tab1').style.display='none';
-		el('switch-create').className='switch disabled'
-	}
-}
-
-
-
-
-
-
-
 
 /* FileSaver.js (source: http://purl.eligrey.com/github/FileSaver.js/blob/master/src/FileSaver.js)
  * A saveAs() FileSaver implementation.
