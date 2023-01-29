@@ -21,15 +21,82 @@ class Z2Rom {
             0x16: [0x1c9fa,0x1c9fc]
         }
     }
+
+    static palettes = {
+        //NES: R,G,B,A
+        0x00: [89,89,95,255],
+        0x01: [0,0,143,255],
+        0x02: [24,0,143,255],
+        0x03: [63,0,119,255],
+        0x04: [85,0,85,255],
+        0x05: [85,0,17,255],
+        0x06: [85,0,0,255],
+        0x07: [68,34,0,255],
+        0x08: [51,51,0,255],
+        0x09: [17,51,0,255],
+        0x0a: [0,51,17,255],
+        0x0b: [0,68,68,255],
+        0x0c: [0,68,102,255],
+        0x0d: [0,0,0,255],
+        0x0e: [8,8,8,255],
+        0x0f: [8,8,8,255],
+        0x10: [170,170,170,255],
+        0x11: [0,68,221,255],
+        0x12: [85,17,238,255],
+        0x13: [119,0,238,255],
+        0x14: [153,0,187,255],
+        0x15: [170,0,85,255],
+        0x16: [153,51,0,255],
+        0x17: [136,68,0,255],
+        0x18: [102,102,0,255],
+        0x19: [51,102,0,255],
+        0x1a: [0,102,0,255],
+        0x1b: [0,102,85,255],
+        0x1c: [0,85,136,255],
+        0x1d: [8,8,8,255],
+        0x1e: [8,8,8,255],
+        0x1f: [8,8,8,255],
+        0x20: [238,238,238,255],
+        0x21: [68,136,255,255],
+        0x22: [119,119,255,255],
+        0x23: [153,68,255,255],
+        0x24: [187,68,238,255],
+        0x25: [204,85,153,255],
+        0x26: [221,102,68,255],
+        0x27: [204,136,0,255],
+        0x28: [187,170,0,255],
+        0x29: [119,187,0,255],
+        0x2a: [34,187,34,255],
+        0x2b: [34,187,119,255],
+        0x2c: [34,187,204,255],
+        0x2d: [68,68,68,255],
+        0x2e: [8,8,8,255],
+        0x2f: [8,8,8,255],
+        0x30: [238,238,238,255],
+        0x31: [153,204,255,255],
+        0x32: [170,170,255,255],
+        0x33: [187,153,255,255],
+        0x34: [221,153,255,255],
+        0x35: [238,153,221,255],
+        0x36: [238,170,170,255],
+        0x37: [238,187,153,255],
+        0x38: [238,221,136,255],
+        0x39: [187,221,136,255],
+        0x3a: [153,221,153,255],
+        0x3b: [153,221,187,255],
+        0x3c: [153,221,238,255]
+    }
+
     rom;
     header = 0x10;
     //size = 0x3c000;
     size = 0x40010;
+    dataSize = 0x39ff7;
     crc = {
         trimmed: '8b5a9d69',
-        headerClean: '861c3fe6',
+        headerClean: 'd870601b',
         headerDirty: 'a7090f55',
-        unheaderedClean: 'ba322865'
+        unheaderedClean: 'fae9c6c1'
     }
 
     startByteValue = 0x21;
@@ -51,7 +118,7 @@ class Z2Rom {
                 document.getElementById("badRom").classList.add("d-none");
                 retrieveSeedInfo();
             } else {
-                console.log("Failure");
+                console.log("Unable to clean rom!");
                 indexedDb.obj.z2Rom = null;
                 indexedDb.save();
                 indexedDb.setFormValues();
@@ -65,11 +132,13 @@ class Z2Rom {
             return true;
         
         this.stripHeader();
+        this.trim();
         switch(this.crc32()) {
             case this.crc.trimmed:
             case this.crc.unheaderedClean:
                 //Clean rom, we can build a new header now
                 this.injectHeaderAndPad();
+                console.log("Clean rom, inject header and compare");
                 console.log(this.crc32());
                 return this.crc32() == this.crc.headerClean;
             default:
@@ -89,7 +158,23 @@ class Z2Rom {
             for(var i=0;i<this.size-16;i++)
                 array[i] = this.rom.seekReadBytes(16+i,1);
             this.rom = new MarcFile(array);
+        } else {
+            console.log("Rom has no header");
         }
+    }
+
+    trim() {
+        var array = new Uint8Array(this.dataSize);
+        for(var b=0; b<this.dataSize; b++){
+            if(this.rom.seekReadBytes(b,1) == null)
+                array[b] = 0xFF;
+            else
+                array[b] = this.rom.seekReadBytes(b,1);
+        }
+        for(var b=this.dataSize; b<this.size-16; b++){
+            array[b] = 0xFF;
+        }
+        this.rom=new MarcFile(array);
     }
 
     injectHeaderAndPad() {

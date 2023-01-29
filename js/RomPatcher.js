@@ -169,23 +169,9 @@ function preparePatchedRom(originalRom, patchedRom){
 	//patchedRom.fileName=patchFile.fileName.replace(/\.([^\.]*?)$/, '.sfc');
 	patchedRom.fileName=seedName;
 	patchedRom.fileType=originalRom.fileType;
-	patchedRom = z2Patcher(patchedRom,!document.getElementById("enableHealthBeep").checked,!document.getElementById("enableMusic").checked,document.getElementById("useFastSpell").checked,document.getElementById("remapUpA").checked,document.getElementById("disableFlashing").checked);
+	patchedRom = z2Patcher(patchedRom,!document.getElementById("enableHealthBeep").checked,!document.getElementById("enableMusic").checked,document.getElementById("useFastSpell").checked,document.getElementById("remapUpA").checked,document.getElementById("disableFlashing").checked,document.getElementById("sprite-list").value);
 	patchedRom.save();
 	indexedDb.save();
-}
-
-function adjustPatch(romToAdjust){
-	indexedDb.save('apply');
-	romToAdjust.fileName=romToAdjust.fileName.replace(/\.([^\.]*?)$/, ' (adjusted).$1');	
-	fetchSpriteData(romToAdjust,indexedDb.obj.sprite,
-		(rom,sprite) => {
-				zeldaPatcher(rom,indexedDb.obj.beep,indexedDb.obj.color,
-					indexedDb.obj.quickswap,indexedDb.obj.speed,!indexedDb.obj.music,
-					indexedDb.obj.resume,indexedDb.obj.flashing,sprite,
-					indexedDb.obj.owp,indexedDb.obj.uwp);
-				setMessage('apply');
-				rom.save();
-		});
 }
 
 function applyPatch(p,r){

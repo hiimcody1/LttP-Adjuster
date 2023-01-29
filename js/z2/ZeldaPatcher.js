@@ -1,11 +1,30 @@
-function z2Patcher(rom, disableHealthBeep, disableMusic, useFastSpell, remapUpA, removeFlashing, spriteName, normalColor, shieldColor, beamSprite){
+function z2Patcher(rom, disableHealthBeep, disableMusic, useFastSpell, remapUpA, removeFlashing, spriteId, normalColor, shieldColor, beamSprite){
     console.log(crc32(rom));
+    rom = patchSprite(rom,spriteId);
     patchHealthBeep(rom,disableHealthBeep);
 	patchMusic(rom,disableMusic);
     patchFastSpell(rom,useFastSpell);
     patchRemapUpA(rom,remapUpA);
     patchRemoveFlashing(rom,removeFlashing);
     console.log(crc32(rom));
+    return rom;
+}
+
+function patchSprite(rom,spriteId) {
+    if(spriteId !== -1 && spriteId in indexedDb.obj.spriteCache) {
+        console.log("Applying " + indexedDb.obj.spriteCache[spriteId]["name"]);
+        let spritePatchRaw = indexedDb.obj.spriteCache[spriteId]["patch"];
+        let rawPatch = atob(spritePatchRaw);
+
+        var array = new Uint8Array(rawPatch.length);
+        for(let r=0;r<rawPatch.length;r++) {
+            array[r] = rawPatch.charCodeAt(r);
+        }
+        
+        let patch = new MarcFile(array);
+        let spritePatch = parseIPSFile(patch);
+        return spritePatch.apply(rom);
+    }
     return rom;
 }
 

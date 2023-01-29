@@ -7,12 +7,14 @@ function IndexedDb(){
     fastSpell: false,
     remapUpA: false,
     removeFlashing: true,
+    spriteId: -1,
     spriteFile: null,
     spriteName: 'link',
     normalColor: 'default',
     shieldColor: 'default',
     beamSprite: 'default',
-    z2Rom: null
+    z2Rom: null,
+    spriteCache: null
   };
 
   if (!('indexedDB' in window)){
@@ -122,6 +124,8 @@ IndexedDb.prototype.save = function(){
   this.obj.fastSpell = el('useFastSpell').checked;
   this.obj.remapUpA = el('remapUpA').checked;
   this.obj.removeFlashing = el('disableFlashing').checked;
+  if(el('sprite-list').options.length > 0)
+    this.obj.spriteId = el('sprite-list').value;
   if (db) {
     var tx = db.transaction('configs', 'readwrite');
     var store = tx.objectStore('configs');
