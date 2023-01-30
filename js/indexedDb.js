@@ -36,11 +36,37 @@ function IndexedDb(){
       db = e.target.result;
       this.load();
     }
+
+    dbPromise.onerror = (e) => {
+      db = "EMULATE";
+      this.load();
+    }
   }  
 }
 
 IndexedDb.prototype.load = function(){
   if (db) {
+    if(db=="EMULATE") {
+      console.log("Emulated indexedDb Load, slowness expected");
+      this.obj.healthBeep     = JSON.parse(localStorage.getItem("healthBeep"));
+      this.obj.music          = JSON.parse(localStorage.getItem("music"));
+      this.obj.fastSpell      = JSON.parse(localStorage.getItem("fastSpell"));
+      this.obj.remapUpA       = JSON.parse(localStorage.getItem("remapUpA"));
+      this.obj.removeFlashing = JSON.parse(localStorage.getItem("removeFlashing"));
+      this.obj.spriteFile     = JSON.parse(localStorage.getItem("spriteFile"));
+      this.obj.spriteName     = JSON.parse(localStorage.getItem("spriteName"));
+      this.obj.normalColor    = JSON.parse(localStorage.getItem("normalColor"));
+      this.obj.shieldColor    = JSON.parse(localStorage.getItem("shieldColor"));
+      this.obj.beamId         = JSON.parse(localStorage.getItem("beamId"));
+      this.obj.beamSprite     = JSON.parse(localStorage.getItem("beamSprite"));
+      this.obj.z2Rom          = JSON.parse(localStorage.getItem("z2Rom"));
+      this.obj.spriteCache    = JSON.parse(localStorage.getItem("spriteCache"));
+      this.obj.beamCache      = JSON.parse(localStorage.getItem("beamCache"));
+      this.loadZ2Rom();
+      this.loadSprite();
+      this.setFormValues();
+      return;
+    }
     var tx = db.transaction('configs', 'readonly');
     var store = tx.objectStore('configs');
     var req = store.getAll();
@@ -152,6 +178,26 @@ IndexedDb.prototype.save = function(){
     this.obj.beamId = el('beam-list').value;
   }
   if (db) {
+    if(db=="EMULATE") {
+      console.log("Emulated indexedDb Store, slowness expected");
+      localStorage.setItem("healthBeep",    JSON.stringify(this.obj.healthBeep));
+      localStorage.setItem("music",         JSON.stringify(this.obj.music));
+      localStorage.setItem("fastSpell",     JSON.stringify(this.obj.fastSpell));
+      localStorage.setItem("remapUpA",      JSON.stringify(this.obj.remapUpA));
+      localStorage.setItem("removeFlashing",JSON.stringify(this.obj.removeFlashing));
+      localStorage.setItem("removeFlashing",JSON.stringify(this.obj.removeFlashing));
+      localStorage.setItem("spriteFile",    JSON.stringify(this.obj.spriteFile));
+      localStorage.setItem("spriteName",    JSON.stringify(this.obj.spriteName));
+      localStorage.setItem("normalColor",   JSON.stringify(this.obj.normalColor));
+      localStorage.setItem("shieldColor",   JSON.stringify(this.obj.shieldColor));
+      localStorage.setItem("beamId",        JSON.stringify(this.obj.beamId));
+      localStorage.setItem("beamSprite",    JSON.stringify(this.obj.beamSprite));
+      localStorage.setItem("z2Rom",         JSON.stringify(this.obj.z2Rom));
+      localStorage.setItem("spriteCache",   JSON.stringify(this.obj.spriteCache));
+      localStorage.setItem("beamCache",     JSON.stringify(this.obj.beamCache));
+      this.setFormValues();
+      return;
+    }
     var tx = db.transaction('configs', 'readwrite');
     var store = tx.objectStore('configs');
     Object.keys(this.obj).forEach(eachKey => {

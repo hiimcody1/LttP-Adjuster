@@ -95,8 +95,6 @@ function patchTunicColor(rom,tunicColorId) {
         rom.seekWriteU8(Z2Rom.memory.tunicColorSingles[2],tunicColorId-0x10);
         for(let i=0;i<Z2Rom.memory.tunicColor.length;i++) {
             rom.seekWriteU8(Z2Rom.memory.tunicColor[i],tunicColorId);
-            console.log("Write " + ((tunicColorId-0x10).toString(16)) + " to " + (Z2Rom.memory.tunicColor[i]+1).toString(16));
-            console.log("Write " + ((tunicColorId-0x20).toString(16)) + " to " + (Z2Rom.memory.tunicColor[i]-1).toString(16));
             rom.seekWriteU8(Z2Rom.memory.tunicColor[i]+1,tunicColorId-0x10);
             rom.seekWriteU8(Z2Rom.memory.tunicColor[i]-1,tunicColorId-0x20);
         }
