@@ -10,11 +10,13 @@ function IndexedDb(){
     spriteId: -1,
     spriteFile: null,
     spriteName: 'link',
-    normalColor: 'default',
-    shieldColor: 'default',
+    normalColor: -1,
+    shieldColor: -1,
+    beamId: -1,
     beamSprite: 'default',
     z2Rom: null,
-    spriteCache: null
+    spriteCache: null,
+    beamCache: null
   };
 
   if (!('indexedDB' in window)){
@@ -108,6 +110,24 @@ IndexedDb.prototype.setFormValues = function(){
   this.obj.fastSpell ? el('useFastSpell').bootstrapToggle('on'): el('useFastSpell').bootstrapToggle('off');
   this.obj.remapUpA ? el('remapUpA').bootstrapToggle('on'): el('remapUpA').bootstrapToggle('off');
   this.obj.removeFlashing ? el('disableFlashing').bootstrapToggle('on'): el('disableFlashing').bootstrapToggle('off');
+  
+  let tunicPicker = el('tunic-color-picker');
+  let shieldPicker= el('shield-color-picker');
+
+  tunicPicker.selectedIndex = this.obj.normalColor;
+  shieldPicker.selectedIndex = this.obj.shieldColor;
+  
+  if ("createEvent" in document) {
+    var evt = document.createEvent("HTMLEvents");
+    evt.initEvent("change", false, true);
+    tunicPicker.dispatchEvent(evt);
+    shieldPicker.dispatchEvent(evt);
+  }
+  else {
+    tunicPicker.fireEvent("onchange");
+    shieldPicker.fireEvent("onchange");
+  }
+
   return;
   if(this.obj.sprite == "custom" || this.obj.sprite == "random")
     //parent.postMessage({"action": "setPreview", "url": "https://static.hiimcody1.com/images/Random.png"}, "https://alttpr.hiimcody1.com/");
@@ -124,8 +144,13 @@ IndexedDb.prototype.save = function(){
   this.obj.fastSpell = el('useFastSpell').checked;
   this.obj.remapUpA = el('remapUpA').checked;
   this.obj.removeFlashing = el('disableFlashing').checked;
-  if(el('sprite-list').options.length > 0)
+
+  if(loadedSprites) {
+    this.obj.normalColor = el('tunic-color-picker').selectedIndex;
+    this.obj.shieldColor = el('shield-color-picker').selectedIndex;
     this.obj.spriteId = el('sprite-list').value;
+    this.obj.beamId = el('beam-list').value;
+  }
   if (db) {
     var tx = db.transaction('configs', 'readwrite');
     var store = tx.objectStore('configs');
