@@ -15,11 +15,10 @@ function z2Patcher(rom, disableHealthBeep, disableMusic, useFastSpell, remapUpA,
 
 function patchSprite(rom,spriteId) {
     let spritePatchRaw = null;
-
-    if(spriteId !== -1 && spriteId in indexedDb.obj.spriteCache) {
+    if((spriteId !== "-1") && (spriteId in indexedDb.obj.spriteCache)) {
         console.log("Applying " + indexedDb.obj.spriteCache[spriteId]["name"]);
         spritePatchRaw = indexedDb.obj.spriteCache[spriteId]["patch"];
-    } else if(spriteId == -2) {
+    } else if(spriteId == "-2") {
         //Random sprite
         console.log("Random sprite");
         let spriteCache = indexedDb.obj.spriteCache;
@@ -52,10 +51,10 @@ function patchSprite(rom,spriteId) {
 function patchBeamSprite(rom,spriteId) {
     let spritePatchRaw = null;
 
-    if(spriteId !== -1 && spriteId in indexedDb.obj.beamCache) {
+    if(spriteId !== "-1" && spriteId in indexedDb.obj.beamCache) {
         console.log("Applying " + indexedDb.obj.beamCache[spriteId]["name"]);
         spritePatchRaw = indexedDb.obj.beamCache[spriteId]["patch"];
-    } else if(spriteId == -2) {
+    } else if(spriteId == "-2") {
         //Random sprite
         console.log("Random sprite");
         let beamCache = indexedDb.obj.beamCache;
@@ -86,7 +85,8 @@ function patchBeamSprite(rom,spriteId) {
 }
 
 function patchTunicColor(rom,tunicColorId) {
-    if(tunicColorId !== -1) {
+    console.log("Tunic: " + tunicColorId);
+    if(tunicColorId !== "-1") {
         for(let i=0;i<Z2Rom.memory.tunicColorSingles.length;i++) {
             rom.seekWriteU8(Z2Rom.memory.tunicColorSingles[i],tunicColorId);
         }
@@ -102,8 +102,8 @@ function patchTunicColor(rom,tunicColorId) {
 }
 
 function patchShieldColor(rom,shieldColorId) {
-    console.log(shieldColorId);
-    if(shieldColorId !== -1) {
+    console.log("Shield: " + shieldColorId);
+    if(shieldColorId !== "-1") {
         for(let i=0;i<Z2Rom.memory.shieldColor.length;i++) {
             rom.seekWriteU8(Z2Rom.memory.shieldColor[i],shieldColorId);
         }
