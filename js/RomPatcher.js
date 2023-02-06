@@ -167,9 +167,9 @@ function _readPatchFile(){
 
 function preparePatchedRom(originalRom, patchedRom){
 	//patchedRom.fileName=patchFile.fileName.replace(/\.([^\.]*?)$/, '.sfc');
+	patchedRom = z2Patcher(originalRom,patchedRom,!document.getElementById("enableHealthBeep").checked,!document.getElementById("enableMusic").checked,document.getElementById("useFastSpell").checked,document.getElementById("remapUpA").checked,document.getElementById("disableFlashing").checked,document.getElementById("sprite-list").value,document.getElementById("tunic-color-picker").value,document.getElementById("shield-color-picker").value,document.getElementById("beam-list").value);
 	patchedRom.fileName=seedName;
 	patchedRom.fileType=originalRom.fileType;
-	patchedRom = z2Patcher(patchedRom,!document.getElementById("enableHealthBeep").checked,!document.getElementById("enableMusic").checked,document.getElementById("useFastSpell").checked,document.getElementById("remapUpA").checked,document.getElementById("disableFlashing").checked,document.getElementById("sprite-list").value,document.getElementById("tunic-color-picker").value,document.getElementById("shield-color-picker").value,document.getElementById("beam-list").value);
 	patchedRom.save();
 	indexedDb.save();
 }
@@ -179,8 +179,8 @@ function applyPatch(p,r){
 		setMessage('create', 'Applying patch...', 'loading');
 
 		try{
-			p.apply(r);
-			preparePatchedRom(r, p.apply(r));
+			//p.apply(r);
+			preparePatchedRom(r, p);
 
 		}catch(e){
 			setMessage('create', 'Error: '+e.message, 'error');

@@ -1,7 +1,8 @@
-function z2Patcher(rom, disableHealthBeep, disableMusic, useFastSpell, remapUpA, removeFlashing, spriteId, tunicColorId, shieldColorId, beamId){
-    console.log(crc32(rom));
-    rom = patchSprite(rom,spriteId);
-    rom = patchBeamSprite(rom,beamId);
+function z2Patcher(originalRom, patchedRom, disableHealthBeep, disableMusic, useFastSpell, remapUpA, removeFlashing, spriteId, tunicColorId, shieldColorId, beamId){
+    console.log(crc32(originalRom));
+    originalRom = patchSprite(originalRom,spriteId);
+    rom = patchedRom.apply(originalRom);
+    originalRom = patchBeamSprite(rom,beamId);
     patchTunicColor(rom,tunicColorId);
     patchShieldColor(rom,shieldColorId);
     patchHealthBeep(rom,disableHealthBeep);
@@ -122,6 +123,7 @@ function patchHealthBeep(rom, disableHealthBeep) {
 }
 
 function patchMusic(rom, disableMusic) {
+    return;
     if(disableMusic) {
         console.log("Disable Music");
         let addresses = Object.entries(Z2Rom.memory.music);
