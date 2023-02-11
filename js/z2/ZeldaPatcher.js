@@ -123,7 +123,6 @@ function patchHealthBeep(rom, disableHealthBeep) {
 }
 
 function patchMusic(rom, disableMusic) {
-    return;
     if(disableMusic) {
         console.log("Disable Music");
         let addresses = Object.entries(Z2Rom.memory.music);
