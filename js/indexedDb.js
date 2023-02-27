@@ -129,7 +129,7 @@ IndexedDb.prototype.loadSprite = function(){
 
 IndexedDb.prototype.setFormValues = function(){
   this.obj.z2Rom==null ? el('romUpload').classList.remove("d-none") : el('romUpload').classList.add("d-none");
-  this.obj.z2Rom==null ? el('seedInfo').classList.add("d-none") : el('seedInfo').classList.remove("d-none");
+  this.obj.z2Rom==null ? el('downloadSeed').classList.add("d-none") : el('downloadSeed').classList.remove("d-none");
   
   this.obj.healthBeep ? el('enableHealthBeep').bootstrapToggle('on'): el('enableHealthBeep').bootstrapToggle('off');
   this.obj.music ? el('enableMusic').bootstrapToggle('on'): el('enableMusic').bootstrapToggle('off');

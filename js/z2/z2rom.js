@@ -169,7 +169,6 @@ class Z2Rom {
             if(this.cleanRom()) {
                 indexedDb.saveZ2Rom(this.rom);
                 document.getElementById("badRom").classList.add("d-none");
-                retrieveSeedInfo();
             } else {
                 console.log("Unable to clean rom!");
                 indexedDb.obj.z2Rom = null;
